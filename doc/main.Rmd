@@ -5,6 +5,16 @@ date: "3/22/2017"
 output: pdf_document
 ---
 
+### Step 0: Setup Knitr root directory
+Make sure that this chunk outputs the project folder **not** the full path to the `doc` folder.
+```{r "setup", include=TRUE}
+require("knitr")
+opts_knit$set(root.dir = normalizePath(".."))
+projDir <- opts_knit$get("root.dir")
+projDir
+```
+
+
 This file is currently a template for implementing one of the suggested papers, Han, Zha, & Giles (2005). Due to the nature of the method, we only implement the method on a subset of the data, "AKumar.txt". In your project, you need to work on the whole dataset. You should follow the same structure as in this tutorial, but update it according to the papers you are assigned.
 
 ## Step 0: Load the packages, specify directories
@@ -13,7 +23,7 @@ This file is currently a template for implementing one of the suggested papers, 
 if (!require("pacman")) install.packages("pacman")
 pacman::p_load(text2vec, dplyr, qlcMatrix, kernlab, knitr)
 
-setwd("~/Dropbox/Project4_WhoIsWho/doc")
+#setwd("~/Dropbox/Project4_WhoIsWho/doc")
 # here replace it with your own path or manually set it in RStudio
 # to where this rmd file is located
 ```
@@ -23,9 +33,13 @@ setwd("~/Dropbox/Project4_WhoIsWho/doc")
 For each record in the dataset, there are some information we want to extract and store them in a regular form: canonical author id, coauthors, paper title, publication venue title. You may need to find regular matched in the input string vectors by using regex in R. Here is a tutorial for regular expression in R, which might help you <https://rstudio-pubs-static.s3.amazonaws.com/74603_76cd14d5983f47408fdf0b323550b846.html>
 
 ```{r}
-AKumar <- data.frame(scan("~/Dropbox/Project4_WhoIsWho/data/nameset/AKumar.txt",
-                          what = list(Coauthor = "", Paper = "", Journal = ""),
-                          sep=">", quiet=TRUE),stringsAsFactors=FALSE)
+AKumar <- data.frame(
+      scan(
+      file.path(projDir,"data","nameset","AKumar.txt", fsep = .Platform$file.sep),
+      what = list(Coauthor = "", Paper = "", Journal = ""),
+      sep=">",
+      quiet=TRUE),
+    stringsAsFactors=FALSE)
 # This need to be modified for different name set
 
 # extract canonical author id befor "_"
@@ -137,7 +151,7 @@ $$
 $$
 
 ```{r}
-source('~/Dropbox/Project4_WhoIsWho/lib/evaluation_measures.R')
+source('lib/evaluation_measures.R')
 matching_matrix_hclust <- matching_matrix(AKumar$AuthorID,result_hclust)
 performance_hclust <- performance_statistics(matching_matrix_hclust)
 matching_matrix_sclust <- matching_matrix(AKumar$AuthorID,result_sclust)
