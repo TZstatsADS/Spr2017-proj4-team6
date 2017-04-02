@@ -72,7 +72,7 @@ $$
 
 To compute TF-IDF, we first need to construct a document-term matrix (DTM). In other words, the first step is to vectorize text by creating a map from words to a vector space. There are some good packages you could use for text mining (probably you have tried during first project, you don't need to follow my code if you are familiar with other package), e.g. *text2vec, tm, tidytext*. Here, we are going to use *text2vec* package. A good tutorial can be found here, <https://cran.r-project.org/web/packages/text2vec/vignettes/text-vectorization.html>.
 
-Let’s first create a vocabulary-based DTM. Here we collect unique terms from all documents and mark each of them with a unique ID using the  `create_vocabulary()` function. We use an iterator to create the vocabulary.
+Let???s first create a vocabulary-based DTM. Here we collect unique terms from all documents and mark each of them with a unique ID using the  `create_vocabulary()` function. We use an iterator to create the vocabulary.
 ```{r}
 it_train <- itoken(AKumar$Paper, 
              preprocessor = tolower, 
@@ -86,7 +86,7 @@ vocab <- create_vocabulary(it_train, stopwords = c("a", "an", "the", "in", "on",
 vocab
 ```
 
-Here, we remove pre-defined stopwords, the words like “a”, “the”, “in”, “I”, “you”, “on”, etc, which do not provide much useful information. 
+Here, we remove pre-defined stopwords, the words like ???a???, ???the???, ???in???, ???I???, ???you???, ???on???, etc, which do not provide much useful information. 
 
 Now that we have a vocabulary list, we can construct a document-term matrix.
 ```{r}
@@ -116,8 +116,20 @@ result_sclust <- specc(as.matrix(dtm_train_tfidf),
                        centers=length(unique(AKumar$AuthorID)))
 end.time <- Sys.time()
 time_sclust <- end.time - start.time
+result_sclust
 table(result_sclust)
 ```
+
+### Our K-way clustering with QR decomposition
+```{r}
+source("lib/SpectralClustering.R")
+## compute cosine similarities matrix
+docsdissim <- cosSparse(t(dtm_train_tfidf))
+## apply K-WAY SPECTRAL CLUSTERING
+k <- length(unique(AKumar$AuthorID))
+result_sQRclust <- specClustering(as.matrix(docsdissim), k)
+```
+
 
 We can also using hierarchical clustering method under the cosine distance. The intention of using a different clustering method is just to let you know how to compare performance between various methods. 
 ```{r}
@@ -156,6 +168,11 @@ matching_matrix_hclust <- matching_matrix(AKumar$AuthorID,result_hclust)
 performance_hclust <- performance_statistics(matching_matrix_hclust)
 matching_matrix_sclust <- matching_matrix(AKumar$AuthorID,result_sclust)
 performance_sclust <- performance_statistics(matching_matrix_sclust)
+# our result (awful for now -> accuracy of 38%)
+matching_matrix_sQRclust <- matching_matrix(AKumar$AuthorID,result_sQRclust)
+performance_sQRclust <- performance_statistics(matching_matrix_sQRclust)
+performance_sQRclust
+
 compare_df <- data.frame(method=c("sClust","hClust"),
                          precision=c(performance_sclust$precision, performance_hclust$precision),
                          recall=c(performance_sclust$recall, performance_hclust$recall),
