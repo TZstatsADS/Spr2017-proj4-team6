@@ -1,0 +1,117 @@
+---
+title: "Script to test feature extraction"
+output: html_notebook
+---
+
+### Step 0: Load output file
+First we have to construct a citation vector from the co-author column of our dataset
+```{r warning=FALSE}
+AKumar <- read_csv("../output/AKumar.csv")
+authors <- AKumar$Coauthor
+title <- AKumar$Paper
+publication <- AKumar$Journal
+```
+
+
+### Step 1: Create document term matrix
+We use the `tm` package to create a corpus of the title strings.
+```{r}
+library(tm)
+docs <- as.vector(AKumar$Paper)
+source <- VectorSource(docs)
+stop_words = stopwords(kind = "en")
+corpus <- SimpleCorpus(source, control = list(language = "en",
+                                              removeWords = stop_words,
+                                              removeNumbers = TRUE,
+                                              stemming = TRUE))
+dtm_title <- DocumentTermMatrix(corpus)
+dim(dtm_title)
+```
+
+### Step 2: Tidy the document term matrix
+The `tidytext` package allows us to reformat a `tm::DocumentTermMatrix` object into a tidy data frame.
+```{r}
+library(tidytext)
+td_dtm_title <- tidy(dtm_title)
+head(td_dtm_title)
+```
+
+### Step 3: 
+```{r}
+
+```
+
+
+```{r}
+
+tb_author <- AKumar %>%
+  tbl_df() %>%
+  select(PaperID, AuthorID, Coauthor) %>%
+  unnest_tokens(Author, Coauthor, token = stringr::str_split, pattern = '[;,]')
+
+tb_title <- AKumar %>%
+  tbl_df() %>%
+  select(PaperID, AuthorID, Paper) %>%
+  unnest_tokens(Words, Paper, token = "words", to_lower = TRUE, drop = TRUE)
+  
+tb_publication <- AKumar %>%
+  tbl_df() %>%
+  select(PaperID, AuthorID, Journal)
+
+```
+
+
+```{r}
+test_case <- str_trim(unlist(str_split(authors[5],'[;,]')), side=c("both"))
+
+x <- c()
+for(i in 1:length(authors)){
+  x <- append(x,str_split(authors[i],'[;,]'))
+}
+citationVocab <- unlist(x)
+citationVocab <- str_trim(citationVocab, side=c("both"))
+citationVocab <- unique(citationVocab)
+```
+
+
+```{r}
+library(tidytext)
+library(tibble)
+titles <- as_tibble(AKumar$Paper, AKumar$PaperID)
+paper_words <- titles %>%
+  unnest_tokens(word,value) %>%
+  count()
+
+```
+
+
+```{r}
+source('lib/feature_extraction.R')
+term_frequency <- tf(test_case, citationVocab)
+
+```
+
+Add a new chunk by clicking the *Insert Chunk* button on the toolbar or by pressing *Cmd+Option+I*.
+```{r}
+
+```
+
+```{r}
+
+```
+
+
+```{r}
+
+
+citation_vector <- c("A Kumar","L Zhao","T Camp",
+                     "M Stonebraker","M Rabinovich","E Stohr",
+                     "V Christophedes","R Hull","J Simeon") # citation vector
+M <- c(0,0,0,
+       0,1,0,
+       0,0,1) # Rabinovich and Simeon appear as co-authors in citation M
+
+v <- length(citation_vector) # vocab size
+```
+
+When you save the notebook, an HTML file containing the code and output will be saved alongside it (click the *Preview* button or press *Cmd+Shift+K* to preview the HTML file).
