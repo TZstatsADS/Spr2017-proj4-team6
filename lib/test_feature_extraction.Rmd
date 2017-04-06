@@ -1,0 +1,132 @@
+---
+title: "Script to test feature extraction"
+output: html_notebook
+---
+
+### Step 0: Setup project directory
+First we have to construct a citation vector from the co-author column of our dataset
+```{r "setup", include=TRUE}
+require("knitr")
+opts_knit$set(root.dir = normalizePath(".."))
+projDir <- opts_knit$get("root.dir")
+projDir
+```
+
+### Step 1: Create document term matrix
+We use the `tm` package to create a corpus of the title strings.
+```{r}
+source('lib/feature_extraction.R')
+exFilePath <- file.path(projDir,'output','MBrown.csv')
+text <- readTextFile(exFilePath)
+authorId <- text$AuthorID
+dtm <- createDocumentTermMatrix(text)
+dtm_train_tfidf <- weightTfIdf(dtm,normalize = TRUE)
+```
+
+### Step 2: Run teacher's clustering algorithm from `kernlab` package
+```{r, include=FALSE}
+start.time <- Sys.time()
+result_sclust <- specc(as.matrix(dtm_train_tfidf), 
+                       centers=length(unique(authorId)))
+end.time <- Sys.time()
+time_sclust <- end.time - start.time
+```
+
+### Step 3: Run our spectral clustering algorithm in `lib/SpectralClustering.R`
+```{r include=FALSE}
+source("lib/SpectralClustering.R")
+start.time <- Sys.time()
+docsdissim <- cosSparse(t(as.matrix(dtm_train_tfidf)))
+## apply K-WAY SPECTRAL CLUSTERING
+k <- length(unique(authorId))
+result_sQRclust <- specClustering(as.matrix(docsdissim), k)
+end.time <- Sys.time()
+time_sQRclust <- end.time - start.time
+```
+
+### Step 4: Run evaluation metrics on both methods and compare
+```{r}
+source('lib/evaluation_measures.R')
+matching_matrix_sclust <- matching_matrix(authorId,result_sclust)
+matching_matrix_sQRclust <- matching_matrix(authorId, result_sQRclust)
+performance_sclust <- performance_statistics(matching_matrix_sclust)
+performance_sQRclust <- performance_statistics(matching_matrix_sQRclust)
+```
+
+```{r}
+compare_df <- data.frame(method=c("Teacher","Group_6"),
+                         precision=c(performance_sclust$precision, performance_sQRclust$precision),
+                         recall=c(performance_sclust$recall, performance_sQRclust$recall),
+                         f1=c(performance_sclust$f1, performance_sQRclust$f1),
+                         accuracy=c(performance_sclust$accuracy, performance_sQRclust$accuracy),
+                         mcc=c(performance_sclust$mcc, performance_sQRclust$mcc),
+                         time=c(time_sclust,time_sQRclust))
+kable(compare_df,caption="Comparision of performance for two clustering methods",digits = 2)
+```
+
+SCRATCH WORK
+-----------------------------------------------------------------------------------------------------------------------
+### Step 3: Cosine similarity
+$$
+similarity = cos(\theta) = \frac{A \cdot B}{\begin{Vmatrix}A\end{Vmatrix} \begin{Vmatrix}B\end{Vmatrix}} = \frac{\sum_{i=1}^n A_i B_i}{\sqrt{\sum_{i=1}^n A_i^2} \sqrt{\sum_{i=1}^n B_i^2}}
+$$
+```{r}
+
+```
+
+
+```{r}
+tb<- createCitationMatrix(text)
+coauthors <- tb %>%
+  transmute(coauthor = str_replace_all(coauthor, " ", "")) %>%
+  transmute(coauthor = str_replace_all(coauthor, ";", " "))
+
+journal <- tb %>%
+  transmute(journal = str_replace_all(journal, " ", ""))
+
+combined <- tibble(str_c(coauthors, journal, tb$paper, sep=" "))
+
+```
+
+
+```{r}
+
+tb_author <- AKumar %>%
+  tbl_df() %>%
+  select(PaperID, AuthorID, Coauthor) %>%
+  unnest_tokens(Author, Coauthor, token = stringr::str_split, pattern = '[;,]')
+
+tb_title <- AKumar %>%
+  tbl_df() %>%
+  select(PaperID, AuthorID, Paper) %>%
+  unnest_tokens(Words, Paper, token = "words", to_lower = TRUE, drop = TRUE)
+  
+tb_publication <- AKumar %>%
+  tbl_df() %>%
+  select(PaperID, AuthorID, Journal)
+
+```
+
+
+```{r}
+test_case <- str_trim(unlist(str_split(authors[5],'[;,]')), side=c("both"))
+
+x <- c()
+for(i in 1:length(authors)){
+  x <- append(x,str_split(authors[i],'[;,]'))
+}
+citationVocab <- unlist(x)
+citationVocab <- str_trim(citationVocab, side=c("both"))
+citationVocab <- unique(citationVocab)
+```
+
+
+```{r}
+library(tidytext)
+library(tibble)
+titles <- as_tibble(AKumar$Paper, AKumar$PaperID)
+paper_words <- titles %>%
+  unnest_tokens(word,value) %>%
+  count()
+
+```

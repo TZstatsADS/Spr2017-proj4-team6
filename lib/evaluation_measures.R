@@ -24,7 +24,7 @@ matching_matrix <- function(G,M){
   ### compute pariwise agreement between two partitions
   for(i in 1:(n-1)){
     for(j in (i+1):n){
-      if(G[i]==G[j]&M[i]==M[j]) result_matrix[1,1]<-result_matrix[1,1]+1
+      if(G[i]==G[j]&M[i]==M[j]) result_matrix[1,1]<-result_matrix[1,1]+1 
       if(G[i]!=G[j]&M[i]==M[j]) result_matrix[1,2]<-result_matrix[1,2]+1
       if(G[i]==G[j]&M[i]!=M[j]) result_matrix[2,1]<-result_matrix[2,1]+1
       if(G[i]!=G[j]&M[i]!=M[j]) result_matrix[2,2]<-result_matrix[2,2]+1
@@ -50,7 +50,15 @@ performance_statistics <- function(result_matrix){
   ### F1 is 2*harmonic mean of presicion and recall
   f1 <- 2*precision*recall/(precision+recall)
   
+  ### We add matthews correlation coefficient (MCC)
+  tp <- result_matrix[1,1]
+  tn <- result_matrix[2,2]
+  fp <- result_matrix[1,2]
+  fn <- result_matrix[2,1]
+
+  mcc <- (tp*tn - fp*fn)/sqrt((tp+fp)*(tp+fn)*(tn+fp)*(tn+fn))
+  
   ### Accuracy is the fraction of agreements
   accuracy <- (result_matrix[1,1]+result_matrix[2,2])/sum(result_matrix)
-  return(list(precision=precision, recall=recall, f1=f1, accuracy=accuracy))
+  return(list(precision=precision, recall=recall, f1=f1, mcc=mcc, accuracy=accuracy))
 }
