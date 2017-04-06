@@ -5,19 +5,32 @@ ntf <- function(){
   
 }
 
-# create tibble from data frame
-createDocumentTermMatrix <- function(filePath){
-  require(tm,tidytext)
+readTextFile <- function(filePath){
+  library(readr)
   text <- read_csv(filePath)
+  return(text)
+}
+
+
+# create tibble from data frame
+createDocumentTermMatrix <- function(text){
+  library(tidytext)
+  library(tm)
   docs <- as.vector(text$Paper)
   source <- VectorSource(docs)
   stop_words = stopwords(kind = "en")
-  corpus <- SimpleCorpus(source, control = list(language = "en",
-                                                removeWords = stop_words,
-                                                removeNumbers = TRUE,
-                                                stemming = TRUE))
+  corpus <- SimpleCorpus(source)
+  corpus <- tm_map(corpus, stripWhitespace)
+  corpus <- tm_map(corpus, removeWords, stop_words)
   dtm <- DocumentTermMatrix(corpus)
-  return(tidy(dtm))
+  return(dtm)
+}
+
+createCitationMatrix <- function(text){
+  library(tidytext)
+  library(tibble)
+  tb <- tibble(coauthor = text$Coauthor, paper = text$Paper, journal = text$Journal)
+  return(tb)
 }
 
 countDocsUsingWord <- function(tdm){

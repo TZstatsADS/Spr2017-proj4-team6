@@ -191,10 +191,10 @@ projDir</code></pre>
 <p>We use the <code>tm</code> package to create a corpus of the title strings.</p>
 <!-- rnb-text-end -->
 <!-- rnb-chunk-begin -->
-<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxuc291cmNlKCdsaWIvZmVhdHVyZV9leHRyYWN0aW9uLlInKVxuZXhGaWxlUGF0aCA8LSBmaWxlLnBhdGgocHJvakRpciwnb3V0cHV0JywnSlJvYmluc29uLmNzdicpXG5kdG0gPC0gY3JlYXRlRG9jdW1lbnRUZXJtTWF0cml4KGV4RmlsZVBhdGgpXG5gYGAifQ== -->
+<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxuc291cmNlKCdsaWIvZmVhdHVyZV9leHRyYWN0aW9uLlInKVxuZXhGaWxlUGF0aCA8LSBmaWxlLnBhdGgocHJvakRpciwnb3V0cHV0JywnTUJyb3duLmNzdicpXG50ZXh0IDwtIHJlYWRUZXh0RmlsZShleEZpbGVQYXRoKVxuYGBgIn0= -->
 <pre class="r"><code>source('lib/feature_extraction.R')
-exFilePath &lt;- file.path(projDir,'output','JRobinson.csv')
-dtm &lt;- createDocumentTermMatrix(exFilePath)</code></pre>
+exFilePath &lt;- file.path(projDir,'output','MBrown.csv')
+text &lt;- readTextFile(exFilePath)</code></pre>
 <!-- rnb-source-end -->
 <!-- rnb-output-begin eyJkYXRhIjoiTWlzc2luZyBjb2x1bW4gbmFtZXMgZmlsbGVkIGluOiAnWDEnIFsxXVBhcnNlZCB3aXRoIGNvbHVtbiBzcGVjaWZpY2F0aW9uOlxuY29scyhcbiAgWDEgPSBjb2xfaW50ZWdlcigpLFxuICBDb2F1dGhvciA9IGNvbF9jaGFyYWN0ZXIoKSxcbiAgUGFwZXIgPSBjb2xfY2hhcmFjdGVyKCksXG4gIEpvdXJuYWwgPSBjb2xfY2hhcmFjdGVyKCksXG4gIEF1dGhvcklEID0gY29sX2ludGVnZXIoKSxcbiAgUGFwZXJOTyA9IGNvbF9pbnRlZ2VyKCksXG4gIFBhcGVySUQgPSBjb2xfaW50ZWdlcigpXG4pXG4ifQ== -->
 <pre><code>Missing column names filled in: 'X1' [1]Parsed with column specification:
@@ -208,24 +208,97 @@ cols(
   PaperID = col_integer()
 )</code></pre>
 <!-- rnb-output-end -->
+<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxuYXV0aG9ySWQgPC0gdGV4dCRBdXRob3JJRFxuZHRtIDwtIGNyZWF0ZURvY3VtZW50VGVybU1hdHJpeCh0ZXh0KVxuZHRtX3RyYWluX3RmaWRmIDwtIHdlaWdodFRmSWRmKGR0bSxub3JtYWxpemUgPSBUUlVFKVxuYGBgIn0= -->
+<pre class="r"><code>authorId &lt;- text$AuthorID
+dtm &lt;- createDocumentTermMatrix(text)
+dtm_train_tfidf &lt;- weightTfIdf(dtm,normalize = TRUE)</code></pre>
+<!-- rnb-source-end -->
+<!-- rnb-output-begin eyJkYXRhIjoiZW1wdHkgZG9jdW1lbnQocyk6IDEyOSAxMzBcbiJ9 -->
+<pre><code>empty document(s): 129 130</code></pre>
+<!-- rnb-output-end -->
 <!-- rnb-chunk-end -->
 <!-- rnb-text-begin -->
 </div>
-<div id="step-2-tidy-the-document-term-matrix" class="section level3">
-<h3>Step 2: Tidy the document term matrix</h3>
-<p>The <code>tidytext</code> package allows us to reformat a <code>tm::DocumentTermMatrix</code> object into a tidy data frame.</p>
+<div id="step-2-run-teachers-clustering-algorithm-from-kernlab-package" class="section level3">
+<h3>Step 2: Run teacher’s clustering algorithm from <code>kernlab</code> package</h3>
+<!-- rnb-text-end -->
+<!-- rnb-text-begin -->
+</div>
+<div id="step-3-run-our-spectral-clustering-algorithm-in-libspectralclustering.r" class="section level3">
+<h3>Step 3: Run our spectral clustering algorithm in <code>lib/SpectralClustering.R</code></h3>
+<!-- rnb-text-end -->
+<!-- rnb-text-begin -->
+</div>
+<div id="step-4-run-evaluation-metrics-on-both-methods-and-compare" class="section level3">
+<h3>Step 4: Run evaluation metrics on both methods and compare</h3>
 <!-- rnb-text-end -->
 <!-- rnb-chunk-begin -->
-<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxuY2R0bSA8LSBkdG0gJT4lXG4gIGNvdW50KHRlcm0pXG5nZHRtIDwtIGR0bSAlPiVcbiAgZ3JvdXBfYnkodGVybSxkb2N1bWVudCkgJT4lXG4gIGNvdW50KGRvY3VtZW50KVxuYGBgIn0= -->
-<pre class="r"><code>cdtm &lt;- dtm %&gt;%
-  count(term)
-gdtm &lt;- dtm %&gt;%
-  group_by(term,document) %&gt;%
-  count(document)</code></pre>
+<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxuc291cmNlKCdsaWIvZXZhbHVhdGlvbl9tZWFzdXJlcy5SJylcbm1hdGNoaW5nX21hdHJpeF9zY2x1c3QgPC0gbWF0Y2hpbmdfbWF0cml4KGF1dGhvcklkLHJlc3VsdF9zY2x1c3QpXG5tYXRjaGluZ19tYXRyaXhfc1FSY2x1c3QgPC0gbWF0Y2hpbmdfbWF0cml4KGF1dGhvcklkLCByZXN1bHRfc1FSY2x1c3QpXG5wZXJmb3JtYW5jZV9zY2x1c3QgPC0gcGVyZm9ybWFuY2Vfc3RhdGlzdGljcyhtYXRjaGluZ19tYXRyaXhfc2NsdXN0KVxucGVyZm9ybWFuY2Vfc1FSY2x1c3QgPC0gcGVyZm9ybWFuY2Vfc3RhdGlzdGljcyhtYXRjaGluZ19tYXRyaXhfc1FSY2x1c3QpXG5gYGAifQ== -->
+<pre class="r"><code>source('lib/evaluation_measures.R')
+matching_matrix_sclust &lt;- matching_matrix(authorId,result_sclust)
+matching_matrix_sQRclust &lt;- matching_matrix(authorId, result_sQRclust)
+performance_sclust &lt;- performance_statistics(matching_matrix_sclust)
+performance_sQRclust &lt;- performance_statistics(matching_matrix_sQRclust)</code></pre>
 <!-- rnb-source-end -->
 <!-- rnb-chunk-end -->
 <!-- rnb-text-begin -->
+<!-- rnb-text-end -->
+<!-- rnb-chunk-begin -->
+<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxuY29tcGFyZV9kZiA8LSBkYXRhLmZyYW1lKG1ldGhvZD1jKFwiVGVhY2hlclwiLFwiR3JvdXBfNlwiKSxcbiAgICAgICAgICAgICAgICAgICAgICAgICBwcmVjaXNpb249YyhwZXJmb3JtYW5jZV9zY2x1c3QkcHJlY2lzaW9uLCBwZXJmb3JtYW5jZV9zUVJjbHVzdCRwcmVjaXNpb24pLFxuICAgICAgICAgICAgICAgICAgICAgICAgIHJlY2FsbD1jKHBlcmZvcm1hbmNlX3NjbHVzdCRyZWNhbGwsIHBlcmZvcm1hbmNlX3NRUmNsdXN0JHJlY2FsbCksXG4gICAgICAgICAgICAgICAgICAgICAgICAgZjE9YyhwZXJmb3JtYW5jZV9zY2x1c3QkZjEsIHBlcmZvcm1hbmNlX3NRUmNsdXN0JGYxKSxcbiAgICAgICAgICAgICAgICAgICAgICAgICBhY2N1cmFjeT1jKHBlcmZvcm1hbmNlX3NjbHVzdCRhY2N1cmFjeSwgcGVyZm9ybWFuY2Vfc1FSY2x1c3QkYWNjdXJhY3kpLFxuICAgICAgICAgICAgICAgICAgICAgICAgIG1jYz1jKHBlcmZvcm1hbmNlX3NjbHVzdCRtY2MsIHBlcmZvcm1hbmNlX3NRUmNsdXN0JG1jYyksXG4gICAgICAgICAgICAgICAgICAgICAgICAgdGltZT1jKHRpbWVfc2NsdXN0LHRpbWVfc1FSY2x1c3QpKVxua2FibGUoY29tcGFyZV9kZixjYXB0aW9uPVwiQ29tcGFyaXNpb24gb2YgcGVyZm9ybWFuY2UgZm9yIHR3byBjbHVzdGVyaW5nIG1ldGhvZHNcIixkaWdpdHMgPSAyKVxuYGBgIn0= -->
+<pre class="r"><code>compare_df &lt;- data.frame(method=c(&quot;Teacher&quot;,&quot;Group_6&quot;),
+                         precision=c(performance_sclust$precision, performance_sQRclust$precision),
+                         recall=c(performance_sclust$recall, performance_sQRclust$recall),
+                         f1=c(performance_sclust$f1, performance_sQRclust$f1),
+                         accuracy=c(performance_sclust$accuracy, performance_sQRclust$accuracy),
+                         mcc=c(performance_sclust$mcc, performance_sQRclust$mcc),
+                         time=c(time_sclust,time_sQRclust))
+kable(compare_df,caption=&quot;Comparision of performance for two clustering methods&quot;,digits = 2)</code></pre>
+<!-- rnb-source-end -->
+
+<!-- rnb-html-begin eyJtZXRhZGF0YSI6eyJjbGFzc2VzIjpbImtuaXRfYXNpcyJdLCJzaXppbmdQb2xpY3kiOltdfX0= -->
+
+<table>
+<thead>
+<tr class="header">
+<th align="left">method</th>
+<th align="right">precision</th>
+<th align="right">recall</th>
+<th align="right">f1</th>
+<th align="right">accuracy</th>
+<th align="right">mcc</th>
+<th align="left">time</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left">Teacher</td>
+<td align="right">0.35</td>
+<td align="right">0.27</td>
+<td align="right">0.30</td>
+<td align="right">0.83</td>
+<td align="right">0.21</td>
+<td align="left">0.35432601 secs</td>
+</tr>
+<tr class="even">
+<td align="left">Group_6</td>
+<td align="right">0.24</td>
+<td align="right">0.33</td>
+<td align="right">0.28</td>
+<td align="right">0.76</td>
+<td align="right">0.14</td>
+<td align="left">0.06225586 secs</td>
+</tr>
+</tbody>
+</table>
+
+
+<!-- rnb-html-end -->
+
+<!-- rnb-chunk-end -->
+<!-- rnb-text-begin -->
 </div>
+<div id="scratch-work" class="section level2">
+<h2>SCRATCH WORK</h2>
 <div id="step-3-cosine-similarity" class="section level3">
 <h3>Step 3: Cosine similarity</h3>
 <p><span class="math display">\[
@@ -237,65 +310,19 @@ similarity = cos(\theta) = \frac{A \cdot B}{\begin{Vmatrix}A\end{Vmatrix} \begin
 <!-- rnb-text-begin -->
 <!-- rnb-text-end -->
 <!-- rnb-chunk-begin -->
-<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxuXG50Yl9hdXRob3IgPC0gQUt1bWFyICU+JVxuICB0YmxfZGYoKSAlPiVcbiAgc2VsZWN0KFBhcGVySUQsIEF1dGhvcklELCBDb2F1dGhvcikgJT4lXG4gIHVubmVzdF90b2tlbnMoQXV0aG9yLCBDb2F1dGhvciwgdG9rZW4gPSBzdHJpbmdyOjpzdHJfc3BsaXQsIHBhdHRlcm4gPSAnWzssXScpXG5cbnRiX3RpdGxlIDwtIEFLdW1hciAlPiVcbiAgdGJsX2RmKCkgJT4lXG4gIHNlbGVjdChQYXBlcklELCBBdXRob3JJRCwgUGFwZXIpICU+JVxuICB1bm5lc3RfdG9rZW5zKFdvcmRzLCBQYXBlciwgdG9rZW4gPSBcIndvcmRzXCIsIHRvX2xvd2VyID0gVFJVRSwgZHJvcCA9IFRSVUUpXG4gIFxudGJfcHVibGljYXRpb24gPC0gQUt1bWFyICU+JVxuICB0YmxfZGYoKSAlPiVcbiAgc2VsZWN0KFBhcGVySUQsIEF1dGhvcklELCBKb3VybmFsKVxuXG5gYGAifQ== -->
-<pre class="r"><code>
-tb_author &lt;- AKumar %&gt;%
-  tbl_df() %&gt;%
-  select(PaperID, AuthorID, Coauthor) %&gt;%
-  unnest_tokens(Author, Coauthor, token = stringr::str_split, pattern = '[;,]')
-
-tb_title &lt;- AKumar %&gt;%
-  tbl_df() %&gt;%
-  select(PaperID, AuthorID, Paper) %&gt;%
-  unnest_tokens(Words, Paper, token = &quot;words&quot;, to_lower = TRUE, drop = TRUE)
-  
-tb_publication &lt;- AKumar %&gt;%
-  tbl_df() %&gt;%
-  select(PaperID, AuthorID, Journal)
-</code></pre>
+<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxudGI8LSBjcmVhdGVDaXRhdGlvbk1hdHJpeCh0ZXh0KVxuY29hdXRob3JzIDwtIHRiICU+JVxuICB0cmFuc211dGUoY29hdXRob3IgPSBzdHJfcmVwbGFjZV9hbGwoY29hdXRob3IsIFwiIFwiLCBcIlwiKSkgJT4lXG4gIHRyYW5zbXV0ZShjb2F1dGhvciA9IHN0cl9yZXBsYWNlX2FsbChjb2F1dGhvciwgXCI7XCIsIFwiIFwiKSlcbmpvdXJuYWwgPC0gdGIgJT4lXG4gIHRyYW5zbXV0ZShqb3VybmFsID0gc3RyX3JlcGxhY2VfYWxsKGpvdXJuYWwsIFwiIFwiLCBcIlwiKSlcbmNvbWJpbmVkIDwtIHRpYmJsZShzdHJfYyhjb2F1dGhvcnMsIGpvdXJuYWwsIHRiJHBhcGVyLCBzZXA9XCIgXCIpKVxuYGBgIn0= -->
+<pre class="r"><code>tb&lt;- createCitationMatrix(text)
+coauthors &lt;- tb %&gt;%
+  transmute(coauthor = str_replace_all(coauthor, &quot; &quot;, &quot;&quot;)) %&gt;%
+  transmute(coauthor = str_replace_all(coauthor, &quot;;&quot;, &quot; &quot;))
+journal &lt;- tb %&gt;%
+  transmute(journal = str_replace_all(journal, &quot; &quot;, &quot;&quot;))
+combined &lt;- tibble(str_c(coauthors, journal, tb$paper, sep=&quot; &quot;))</code></pre>
 <!-- rnb-source-end -->
 <!-- rnb-chunk-end -->
 <!-- rnb-text-begin -->
 <!-- rnb-text-end -->
 <!-- rnb-chunk-begin -->
-<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxudGVzdF9jYXNlIDwtIHN0cl90cmltKHVubGlzdChzdHJfc3BsaXQoYXV0aG9yc1s1XSwnWzssXScpKSwgc2lkZT1jKFwiYm90aFwiKSlcblxueCA8LSBjKClcbmZvcihpIGluIDE6bGVuZ3RoKGF1dGhvcnMpKXtcbiAgeCA8LSBhcHBlbmQoeCxzdHJfc3BsaXQoYXV0aG9yc1tpXSwnWzssXScpKVxufVxuY2l0YXRpb25Wb2NhYiA8LSB1bmxpc3QoeClcbmNpdGF0aW9uVm9jYWIgPC0gc3RyX3RyaW0oY2l0YXRpb25Wb2NhYiwgc2lkZT1jKFwiYm90aFwiKSlcbmNpdGF0aW9uVm9jYWIgPC0gdW5pcXVlKGNpdGF0aW9uVm9jYWIpXG5gYGAifQ== -->
-<pre class="r"><code>test_case &lt;- str_trim(unlist(str_split(authors[5],'[;,]')), side=c(&quot;both&quot;))
-
-x &lt;- c()
-for(i in 1:length(authors)){
-  x &lt;- append(x,str_split(authors[i],'[;,]'))
-}
-citationVocab &lt;- unlist(x)
-citationVocab &lt;- str_trim(citationVocab, side=c(&quot;both&quot;))
-citationVocab &lt;- unique(citationVocab)</code></pre>
-<!-- rnb-source-end -->
-<!-- rnb-chunk-end -->
-<!-- rnb-text-begin -->
-<!-- rnb-text-end -->
-<!-- rnb-chunk-begin -->
-<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxubGlicmFyeSh0aWR5dGV4dClcbmxpYnJhcnkodGliYmxlKVxudGl0bGVzIDwtIGFzX3RpYmJsZShBS3VtYXIkUGFwZXIsIEFLdW1hciRQYXBlcklEKVxucGFwZXJfd29yZHMgPC0gdGl0bGVzICU+JVxuICB1bm5lc3RfdG9rZW5zKHdvcmQsdmFsdWUpICU+JVxuICBjb3VudCgpXG5cbmBgYCJ9 -->
-<pre class="r"><code>library(tidytext)
-library(tibble)
-titles &lt;- as_tibble(AKumar$Paper, AKumar$PaperID)
-paper_words &lt;- titles %&gt;%
-  unnest_tokens(word,value) %&gt;%
-  count()
-</code></pre>
-<!-- rnb-source-end -->
-<!-- rnb-chunk-end -->
-<!-- rnb-text-begin -->
-<!-- rnb-text-end -->
-<!-- rnb-chunk-begin -->
-<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxuc291cmNlKCdsaWIvZmVhdHVyZV9leHRyYWN0aW9uLlInKVxudGVybV9mcmVxdWVuY3kgPC0gdGYodGVzdF9jYXNlLCBjaXRhdGlvblZvY2FiKVxuXG5gYGAifQ== -->
-<pre class="r"><code>source('lib/feature_extraction.R')
-term_frequency &lt;- tf(test_case, citationVocab)
-</code></pre>
-<!-- rnb-source-end -->
-<!-- rnb-chunk-end -->
-<!-- rnb-text-begin -->
-<p>Add a new chunk by clicking the <em>Insert Chunk</em> button on the toolbar or by pressing <em>Cmd+Option+I</em>.</p>
-<!-- rnb-text-end -->
-<!-- rnb-chunk-begin -->
 <!-- rnb-chunk-end -->
 <!-- rnb-text-begin -->
 <!-- rnb-text-end -->
@@ -304,25 +331,11 @@ term_frequency &lt;- tf(test_case, citationVocab)
 <!-- rnb-text-begin -->
 <!-- rnb-text-end -->
 <!-- rnb-chunk-begin -->
-<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxuXG5cbmNpdGF0aW9uX3ZlY3RvciA8LSBjKFwiQSBLdW1hclwiLFwiTCBaaGFvXCIsXCJUIENhbXBcIixcbiAgICAgICAgICAgICAgICAgICAgIFwiTSBTdG9uZWJyYWtlclwiLFwiTSBSYWJpbm92aWNoXCIsXCJFIFN0b2hyXCIsXG4gICAgICAgICAgICAgICAgICAgICBcIlYgQ2hyaXN0b3BoZWRlc1wiLFwiUiBIdWxsXCIsXCJKIFNpbWVvblwiKSAjIGNpdGF0aW9uIHZlY3RvclxuTSA8LSBjKDAsMCwwLFxuICAgICAgIDAsMSwwLFxuICAgICAgIDAsMCwxKSAjIFJhYmlub3ZpY2ggYW5kIFNpbWVvbiBhcHBlYXIgYXMgY28tYXV0aG9ycyBpbiBjaXRhdGlvbiBNXG5cbnYgPC0gbGVuZ3RoKGNpdGF0aW9uX3ZlY3RvcikgIyB2b2NhYiBzaXplXG5gYGAifQ== -->
-<pre class="r"><code>
-
-citation_vector &lt;- c(&quot;A Kumar&quot;,&quot;L Zhao&quot;,&quot;T Camp&quot;,
-                     &quot;M Stonebraker&quot;,&quot;M Rabinovich&quot;,&quot;E Stohr&quot;,
-                     &quot;V Christophedes&quot;,&quot;R Hull&quot;,&quot;J Simeon&quot;) # citation vector
-M &lt;- c(0,0,0,
-       0,1,0,
-       0,0,1) # Rabinovich and Simeon appear as co-authors in citation M
-
-v &lt;- length(citation_vector) # vocab size</code></pre>
-<!-- rnb-source-end -->
 <!-- rnb-chunk-end -->
-<!-- rnb-text-begin -->
-<p>When you save the notebook, an HTML file containing the code and output will be saved alongside it (click the <em>Preview</em> button or press <em>Cmd+Shift+K</em> to preview the HTML file).</p>
-<!-- rnb-text-end -->
+</div>
 </div>
 
-<div id="rmd-source-code">LS0tCnRpdGxlOiAiU2NyaXB0IHRvIHRlc3QgZmVhdHVyZSBleHRyYWN0aW9uIgpvdXRwdXQ6IGh0bWxfbm90ZWJvb2sKLS0tCgojIyMgU3RlcCAwOiBTZXR1cCBwcm9qZWN0IGRpcmVjdG9yeQpGaXJzdCB3ZSBoYXZlIHRvIGNvbnN0cnVjdCBhIGNpdGF0aW9uIHZlY3RvciBmcm9tIHRoZSBjby1hdXRob3IgY29sdW1uIG9mIG91ciBkYXRhc2V0CmBgYHtyICJzZXR1cCIsIGluY2x1ZGU9VFJVRX0KcmVxdWlyZSgia25pdHIiKQpvcHRzX2tuaXQkc2V0KHJvb3QuZGlyID0gbm9ybWFsaXplUGF0aCgiLi4iKSkKcHJvakRpciA8LSBvcHRzX2tuaXQkZ2V0KCJyb290LmRpciIpCnByb2pEaXIKYGBgCgojIyMgU3RlcCAxOiBDcmVhdGUgZG9jdW1lbnQgdGVybSBtYXRyaXgKV2UgdXNlIHRoZSBgdG1gIHBhY2thZ2UgdG8gY3JlYXRlIGEgY29ycHVzIG9mIHRoZSB0aXRsZSBzdHJpbmdzLgpgYGB7cn0Kc291cmNlKCdsaWIvZmVhdHVyZV9leHRyYWN0aW9uLlInKQpleEZpbGVQYXRoIDwtIGZpbGUucGF0aChwcm9qRGlyLCdvdXRwdXQnLCdKUm9iaW5zb24uY3N2JykKZHRtIDwtIGNyZWF0ZURvY3VtZW50VGVybU1hdHJpeChleEZpbGVQYXRoKQpgYGAKCiMjIyBTdGVwIDI6IFRpZHkgdGhlIGRvY3VtZW50IHRlcm0gbWF0cml4ClRoZSBgdGlkeXRleHRgIHBhY2thZ2UgYWxsb3dzIHVzIHRvIHJlZm9ybWF0IGEgYHRtOjpEb2N1bWVudFRlcm1NYXRyaXhgIG9iamVjdCBpbnRvIGEgdGlkeSBkYXRhIGZyYW1lLgpgYGB7cn0KY2R0bSA8LSBkdG0gJT4lCiAgY291bnQodGVybSkKCmdkdG0gPC0gZHRtICU+JQogIGdyb3VwX2J5KHRlcm0pICU+JQogIGNvdW50KGRvY3VtZW50KQpgYGAKCiMjIyBTdGVwIDM6IENvc2luZSBzaW1pbGFyaXR5CiQkCnNpbWlsYXJpdHkgPSBjb3MoXHRoZXRhKSA9IFxmcmFje0EgXGNkb3QgQn17XGJlZ2lue1ZtYXRyaXh9QVxlbmR7Vm1hdHJpeH0gXGJlZ2lue1ZtYXRyaXh9QlxlbmR7Vm1hdHJpeH19ID0gXGZyYWN7XHN1bV97aT0xfV5uIEFfaSBCX2l9e1xzcXJ0e1xzdW1fe2k9MX1ebiBBX2leMn0gXHNxcnR7XHN1bV97aT0xfV5uIEJfaV4yfX0KJCQKYGBge3J9CgpgYGAKCgpgYGB7cn0KCnRiX2F1dGhvciA8LSBBS3VtYXIgJT4lCiAgdGJsX2RmKCkgJT4lCiAgc2VsZWN0KFBhcGVySUQsIEF1dGhvcklELCBDb2F1dGhvcikgJT4lCiAgdW5uZXN0X3Rva2VucyhBdXRob3IsIENvYXV0aG9yLCB0b2tlbiA9IHN0cmluZ3I6OnN0cl9zcGxpdCwgcGF0dGVybiA9ICdbOyxdJykKCnRiX3RpdGxlIDwtIEFLdW1hciAlPiUKICB0YmxfZGYoKSAlPiUKICBzZWxlY3QoUGFwZXJJRCwgQXV0aG9ySUQsIFBhcGVyKSAlPiUKICB1bm5lc3RfdG9rZW5zKFdvcmRzLCBQYXBlciwgdG9rZW4gPSAid29yZHMiLCB0b19sb3dlciA9IFRSVUUsIGRyb3AgPSBUUlVFKQogIAp0Yl9wdWJsaWNhdGlvbiA8LSBBS3VtYXIgJT4lCiAgdGJsX2RmKCkgJT4lCiAgc2VsZWN0KFBhcGVySUQsIEF1dGhvcklELCBKb3VybmFsKQoKYGBgCgoKYGBge3J9CnRlc3RfY2FzZSA8LSBzdHJfdHJpbSh1bmxpc3Qoc3RyX3NwbGl0KGF1dGhvcnNbNV0sJ1s7LF0nKSksIHNpZGU9YygiYm90aCIpKQoKeCA8LSBjKCkKZm9yKGkgaW4gMTpsZW5ndGgoYXV0aG9ycykpewogIHggPC0gYXBwZW5kKHgsc3RyX3NwbGl0KGF1dGhvcnNbaV0sJ1s7LF0nKSkKfQpjaXRhdGlvblZvY2FiIDwtIHVubGlzdCh4KQpjaXRhdGlvblZvY2FiIDwtIHN0cl90cmltKGNpdGF0aW9uVm9jYWIsIHNpZGU9YygiYm90aCIpKQpjaXRhdGlvblZvY2FiIDwtIHVuaXF1ZShjaXRhdGlvblZvY2FiKQpgYGAKCgpgYGB7cn0KbGlicmFyeSh0aWR5dGV4dCkKbGlicmFyeSh0aWJibGUpCnRpdGxlcyA8LSBhc190aWJibGUoQUt1bWFyJFBhcGVyLCBBS3VtYXIkUGFwZXJJRCkKcGFwZXJfd29yZHMgPC0gdGl0bGVzICU+JQogIHVubmVzdF90b2tlbnMod29yZCx2YWx1ZSkgJT4lCiAgY291bnQoKQoKYGBgCgoKYGBge3J9CnNvdXJjZSgnbGliL2ZlYXR1cmVfZXh0cmFjdGlvbi5SJykKdGVybV9mcmVxdWVuY3kgPC0gdGYodGVzdF9jYXNlLCBjaXRhdGlvblZvY2FiKQoKYGBgCgpBZGQgYSBuZXcgY2h1bmsgYnkgY2xpY2tpbmcgdGhlICpJbnNlcnQgQ2h1bmsqIGJ1dHRvbiBvbiB0aGUgdG9vbGJhciBvciBieSBwcmVzc2luZyAqQ21kK09wdGlvbitJKi4KYGBge3J9CgpgYGAKCmBgYHtyfQoKYGBgCgoKYGBge3J9CgoKY2l0YXRpb25fdmVjdG9yIDwtIGMoIkEgS3VtYXIiLCJMIFpoYW8iLCJUIENhbXAiLAogICAgICAgICAgICAgICAgICAgICAiTSBTdG9uZWJyYWtlciIsIk0gUmFiaW5vdmljaCIsIkUgU3RvaHIiLAogICAgICAgICAgICAgICAgICAgICAiViBDaHJpc3RvcGhlZGVzIiwiUiBIdWxsIiwiSiBTaW1lb24iKSAjIGNpdGF0aW9uIHZlY3RvcgpNIDwtIGMoMCwwLDAsCiAgICAgICAwLDEsMCwKICAgICAgIDAsMCwxKSAjIFJhYmlub3ZpY2ggYW5kIFNpbWVvbiBhcHBlYXIgYXMgY28tYXV0aG9ycyBpbiBjaXRhdGlvbiBNCgp2IDwtIGxlbmd0aChjaXRhdGlvbl92ZWN0b3IpICMgdm9jYWIgc2l6ZQpgYGAKCldoZW4geW91IHNhdmUgdGhlIG5vdGVib29rLCBhbiBIVE1MIGZpbGUgY29udGFpbmluZyB0aGUgY29kZSBhbmQgb3V0cHV0IHdpbGwgYmUgc2F2ZWQgYWxvbmdzaWRlIGl0IChjbGljayB0aGUgKlByZXZpZXcqIGJ1dHRvbiBvciBwcmVzcyAqQ21kK1NoaWZ0K0sqIHRvIHByZXZpZXcgdGhlIEhUTUwgZmlsZSkuCg==</div>
+<div id="rmd-source-code">LS0tCnRpdGxlOiAiU2NyaXB0IHRvIHRlc3QgZmVhdHVyZSBleHRyYWN0aW9uIgpvdXRwdXQ6IGh0bWxfbm90ZWJvb2sKLS0tCgojIyMgU3RlcCAwOiBTZXR1cCBwcm9qZWN0IGRpcmVjdG9yeQpGaXJzdCB3ZSBoYXZlIHRvIGNvbnN0cnVjdCBhIGNpdGF0aW9uIHZlY3RvciBmcm9tIHRoZSBjby1hdXRob3IgY29sdW1uIG9mIG91ciBkYXRhc2V0CmBgYHtyICJzZXR1cCIsIGluY2x1ZGU9VFJVRX0KcmVxdWlyZSgia25pdHIiKQpvcHRzX2tuaXQkc2V0KHJvb3QuZGlyID0gbm9ybWFsaXplUGF0aCgiLi4iKSkKcHJvakRpciA8LSBvcHRzX2tuaXQkZ2V0KCJyb290LmRpciIpCnByb2pEaXIKYGBgCgojIyMgU3RlcCAxOiBDcmVhdGUgZG9jdW1lbnQgdGVybSBtYXRyaXgKV2UgdXNlIHRoZSBgdG1gIHBhY2thZ2UgdG8gY3JlYXRlIGEgY29ycHVzIG9mIHRoZSB0aXRsZSBzdHJpbmdzLgpgYGB7cn0Kc291cmNlKCdsaWIvZmVhdHVyZV9leHRyYWN0aW9uLlInKQpleEZpbGVQYXRoIDwtIGZpbGUucGF0aChwcm9qRGlyLCdvdXRwdXQnLCdNQnJvd24uY3N2JykKdGV4dCA8LSByZWFkVGV4dEZpbGUoZXhGaWxlUGF0aCkKYXV0aG9ySWQgPC0gdGV4dCRBdXRob3JJRApkdG0gPC0gY3JlYXRlRG9jdW1lbnRUZXJtTWF0cml4KHRleHQpCmR0bV90cmFpbl90ZmlkZiA8LSB3ZWlnaHRUZklkZihkdG0sbm9ybWFsaXplID0gVFJVRSkKYGBgCgojIyMgU3RlcCAyOiBSdW4gdGVhY2hlcidzIGNsdXN0ZXJpbmcgYWxnb3JpdGhtIGZyb20gYGtlcm5sYWJgIHBhY2thZ2UKYGBge3IsIGluY2x1ZGU9RkFMU0V9CnN0YXJ0LnRpbWUgPC0gU3lzLnRpbWUoKQpyZXN1bHRfc2NsdXN0IDwtIHNwZWNjKGFzLm1hdHJpeChkdG1fdHJhaW5fdGZpZGYpLCAKICAgICAgICAgICAgICAgICAgICAgICBjZW50ZXJzPWxlbmd0aCh1bmlxdWUoYXV0aG9ySWQpKSkKZW5kLnRpbWUgPC0gU3lzLnRpbWUoKQp0aW1lX3NjbHVzdCA8LSBlbmQudGltZSAtIHN0YXJ0LnRpbWUKYGBgCgojIyMgU3RlcCAzOiBSdW4gb3VyIHNwZWN0cmFsIGNsdXN0ZXJpbmcgYWxnb3JpdGhtIGluIGBsaWIvU3BlY3RyYWxDbHVzdGVyaW5nLlJgCmBgYHtyIGluY2x1ZGU9RkFMU0V9CnNvdXJjZSgibGliL1NwZWN0cmFsQ2x1c3RlcmluZy5SIikKc3RhcnQudGltZSA8LSBTeXMudGltZSgpCmRvY3NkaXNzaW0gPC0gY29zU3BhcnNlKHQoYXMubWF0cml4KGR0bV90cmFpbl90ZmlkZikpKQojIyBhcHBseSBLLVdBWSBTUEVDVFJBTCBDTFVTVEVSSU5HCmsgPC0gbGVuZ3RoKHVuaXF1ZShhdXRob3JJZCkpCnJlc3VsdF9zUVJjbHVzdCA8LSBzcGVjQ2x1c3RlcmluZyhhcy5tYXRyaXgoZG9jc2Rpc3NpbSksIGspCmVuZC50aW1lIDwtIFN5cy50aW1lKCkKdGltZV9zUVJjbHVzdCA8LSBlbmQudGltZSAtIHN0YXJ0LnRpbWUKYGBgCgojIyMgU3RlcCA0OiBSdW4gZXZhbHVhdGlvbiBtZXRyaWNzIG9uIGJvdGggbWV0aG9kcyBhbmQgY29tcGFyZQpgYGB7cn0Kc291cmNlKCdsaWIvZXZhbHVhdGlvbl9tZWFzdXJlcy5SJykKbWF0Y2hpbmdfbWF0cml4X3NjbHVzdCA8LSBtYXRjaGluZ19tYXRyaXgoYXV0aG9ySWQscmVzdWx0X3NjbHVzdCkKbWF0Y2hpbmdfbWF0cml4X3NRUmNsdXN0IDwtIG1hdGNoaW5nX21hdHJpeChhdXRob3JJZCwgcmVzdWx0X3NRUmNsdXN0KQpwZXJmb3JtYW5jZV9zY2x1c3QgPC0gcGVyZm9ybWFuY2Vfc3RhdGlzdGljcyhtYXRjaGluZ19tYXRyaXhfc2NsdXN0KQpwZXJmb3JtYW5jZV9zUVJjbHVzdCA8LSBwZXJmb3JtYW5jZV9zdGF0aXN0aWNzKG1hdGNoaW5nX21hdHJpeF9zUVJjbHVzdCkKYGBgCgpgYGB7cn0KY29tcGFyZV9kZiA8LSBkYXRhLmZyYW1lKG1ldGhvZD1jKCJUZWFjaGVyIiwiR3JvdXBfNiIpLAogICAgICAgICAgICAgICAgICAgICAgICAgcHJlY2lzaW9uPWMocGVyZm9ybWFuY2Vfc2NsdXN0JHByZWNpc2lvbiwgcGVyZm9ybWFuY2Vfc1FSY2x1c3QkcHJlY2lzaW9uKSwKICAgICAgICAgICAgICAgICAgICAgICAgIHJlY2FsbD1jKHBlcmZvcm1hbmNlX3NjbHVzdCRyZWNhbGwsIHBlcmZvcm1hbmNlX3NRUmNsdXN0JHJlY2FsbCksCiAgICAgICAgICAgICAgICAgICAgICAgICBmMT1jKHBlcmZvcm1hbmNlX3NjbHVzdCRmMSwgcGVyZm9ybWFuY2Vfc1FSY2x1c3QkZjEpLAogICAgICAgICAgICAgICAgICAgICAgICAgYWNjdXJhY3k9YyhwZXJmb3JtYW5jZV9zY2x1c3QkYWNjdXJhY3ksIHBlcmZvcm1hbmNlX3NRUmNsdXN0JGFjY3VyYWN5KSwKICAgICAgICAgICAgICAgICAgICAgICAgIG1jYz1jKHBlcmZvcm1hbmNlX3NjbHVzdCRtY2MsIHBlcmZvcm1hbmNlX3NRUmNsdXN0JG1jYyksCiAgICAgICAgICAgICAgICAgICAgICAgICB0aW1lPWModGltZV9zY2x1c3QsdGltZV9zUVJjbHVzdCkpCmthYmxlKGNvbXBhcmVfZGYsY2FwdGlvbj0iQ29tcGFyaXNpb24gb2YgcGVyZm9ybWFuY2UgZm9yIHR3byBjbHVzdGVyaW5nIG1ldGhvZHMiLGRpZ2l0cyA9IDIpCmBgYAoKU0NSQVRDSCBXT1JLCi0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tCiMjIyBTdGVwIDM6IENvc2luZSBzaW1pbGFyaXR5CiQkCnNpbWlsYXJpdHkgPSBjb3MoXHRoZXRhKSA9IFxmcmFje0EgXGNkb3QgQn17XGJlZ2lue1ZtYXRyaXh9QVxlbmR7Vm1hdHJpeH0gXGJlZ2lue1ZtYXRyaXh9QlxlbmR7Vm1hdHJpeH19ID0gXGZyYWN7XHN1bV97aT0xfV5uIEFfaSBCX2l9e1xzcXJ0e1xzdW1fe2k9MX1ebiBBX2leMn0gXHNxcnR7XHN1bV97aT0xfV5uIEJfaV4yfX0KJCQKYGBge3J9CgpgYGAKCgpgYGB7cn0KdGI8LSBjcmVhdGVDaXRhdGlvbk1hdHJpeCh0ZXh0KQpjb2F1dGhvcnMgPC0gdGIgJT4lCiAgdHJhbnNtdXRlKGNvYXV0aG9yID0gc3RyX3JlcGxhY2VfYWxsKGNvYXV0aG9yLCAiICIsICIiKSkgJT4lCiAgdHJhbnNtdXRlKGNvYXV0aG9yID0gc3RyX3JlcGxhY2VfYWxsKGNvYXV0aG9yLCAiOyIsICIgIikpCgpqb3VybmFsIDwtIHRiICU+JQogIHRyYW5zbXV0ZShqb3VybmFsID0gc3RyX3JlcGxhY2VfYWxsKGpvdXJuYWwsICIgIiwgIiIpKQoKY29tYmluZWQgPC0gdGliYmxlKHN0cl9jKGNvYXV0aG9ycywgam91cm5hbCwgdGIkcGFwZXIsIHNlcD0iICIpKQoKYGBgCgoKYGBge3J9Cgp0Yl9hdXRob3IgPC0gQUt1bWFyICU+JQogIHRibF9kZigpICU+JQogIHNlbGVjdChQYXBlcklELCBBdXRob3JJRCwgQ29hdXRob3IpICU+JQogIHVubmVzdF90b2tlbnMoQXV0aG9yLCBDb2F1dGhvciwgdG9rZW4gPSBzdHJpbmdyOjpzdHJfc3BsaXQsIHBhdHRlcm4gPSAnWzssXScpCgp0Yl90aXRsZSA8LSBBS3VtYXIgJT4lCiAgdGJsX2RmKCkgJT4lCiAgc2VsZWN0KFBhcGVySUQsIEF1dGhvcklELCBQYXBlcikgJT4lCiAgdW5uZXN0X3Rva2VucyhXb3JkcywgUGFwZXIsIHRva2VuID0gIndvcmRzIiwgdG9fbG93ZXIgPSBUUlVFLCBkcm9wID0gVFJVRSkKICAKdGJfcHVibGljYXRpb24gPC0gQUt1bWFyICU+JQogIHRibF9kZigpICU+JQogIHNlbGVjdChQYXBlcklELCBBdXRob3JJRCwgSm91cm5hbCkKCmBgYAoKCmBgYHtyfQp0ZXN0X2Nhc2UgPC0gc3RyX3RyaW0odW5saXN0KHN0cl9zcGxpdChhdXRob3JzWzVdLCdbOyxdJykpLCBzaWRlPWMoImJvdGgiKSkKCnggPC0gYygpCmZvcihpIGluIDE6bGVuZ3RoKGF1dGhvcnMpKXsKICB4IDwtIGFwcGVuZCh4LHN0cl9zcGxpdChhdXRob3JzW2ldLCdbOyxdJykpCn0KY2l0YXRpb25Wb2NhYiA8LSB1bmxpc3QoeCkKY2l0YXRpb25Wb2NhYiA8LSBzdHJfdHJpbShjaXRhdGlvblZvY2FiLCBzaWRlPWMoImJvdGgiKSkKY2l0YXRpb25Wb2NhYiA8LSB1bmlxdWUoY2l0YXRpb25Wb2NhYikKYGBgCgoKYGBge3J9CmxpYnJhcnkodGlkeXRleHQpCmxpYnJhcnkodGliYmxlKQp0aXRsZXMgPC0gYXNfdGliYmxlKEFLdW1hciRQYXBlciwgQUt1bWFyJFBhcGVySUQpCnBhcGVyX3dvcmRzIDwtIHRpdGxlcyAlPiUKICB1bm5lc3RfdG9rZW5zKHdvcmQsdmFsdWUpICU+JQogIGNvdW50KCkKCmBgYAo=</div>
 
 
 

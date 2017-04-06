@@ -16,26 +16,75 @@ projDir
 We use the `tm` package to create a corpus of the title strings.
 ```{r}
 source('lib/feature_extraction.R')
-exFilePath <- file.path(projDir,'output','JRobinson.csv')
-dtm <- createDocumentTermMatrix(exFilePath)
+exFilePath <- file.path(projDir,'output','MBrown.csv')
+text <- readTextFile(exFilePath)
+authorId <- text$AuthorID
+dtm <- createDocumentTermMatrix(text)
+dtm_train_tfidf <- weightTfIdf(dtm,normalize = TRUE)
 ```
 
-### Step 2: Tidy the document term matrix
-The `tidytext` package allows us to reformat a `tm::DocumentTermMatrix` object into a tidy data frame.
+### Step 2: Run teacher's clustering algorithm from `kernlab` package
+```{r, include=FALSE}
+start.time <- Sys.time()
+result_sclust <- specc(as.matrix(dtm_train_tfidf), 
+                       centers=length(unique(authorId)))
+end.time <- Sys.time()
+time_sclust <- end.time - start.time
+```
+
+### Step 3: Run our spectral clustering algorithm in `lib/SpectralClustering.R`
+```{r include=FALSE}
+source("lib/SpectralClustering.R")
+start.time <- Sys.time()
+docsdissim <- cosSparse(t(as.matrix(dtm_train_tfidf)))
+## apply K-WAY SPECTRAL CLUSTERING
+k <- length(unique(authorId))
+result_sQRclust <- specClustering(as.matrix(docsdissim), k)
+end.time <- Sys.time()
+time_sQRclust <- end.time - start.time
+```
+
+### Step 4: Run evaluation metrics on both methods and compare
 ```{r}
-cdtm <- dtm %>%
-  count(term)
-
-gdtm <- dtm %>%
-  group_by(term) %>%
-  count(document)
+source('lib/evaluation_measures.R')
+matching_matrix_sclust <- matching_matrix(authorId,result_sclust)
+matching_matrix_sQRclust <- matching_matrix(authorId, result_sQRclust)
+performance_sclust <- performance_statistics(matching_matrix_sclust)
+performance_sQRclust <- performance_statistics(matching_matrix_sQRclust)
 ```
 
+```{r}
+compare_df <- data.frame(method=c("Teacher","Group_6"),
+                         precision=c(performance_sclust$precision, performance_sQRclust$precision),
+                         recall=c(performance_sclust$recall, performance_sQRclust$recall),
+                         f1=c(performance_sclust$f1, performance_sQRclust$f1),
+                         accuracy=c(performance_sclust$accuracy, performance_sQRclust$accuracy),
+                         mcc=c(performance_sclust$mcc, performance_sQRclust$mcc),
+                         time=c(time_sclust,time_sQRclust))
+kable(compare_df,caption="Comparision of performance for two clustering methods",digits = 2)
+```
+
+SCRATCH WORK
+-----------------------------------------------------------------------------------------------------------------------
 ### Step 3: Cosine similarity
 $$
 similarity = cos(\theta) = \frac{A \cdot B}{\begin{Vmatrix}A\end{Vmatrix} \begin{Vmatrix}B\end{Vmatrix}} = \frac{\sum_{i=1}^n A_i B_i}{\sqrt{\sum_{i=1}^n A_i^2} \sqrt{\sum_{i=1}^n B_i^2}}
 $$
 ```{r}
+
+```
+
+
+```{r}
+tb<- createCitationMatrix(text)
+coauthors <- tb %>%
+  transmute(coauthor = str_replace_all(coauthor, " ", "")) %>%
+  transmute(coauthor = str_replace_all(coauthor, ";", " "))
+
+journal <- tb %>%
+  transmute(journal = str_replace_all(journal, " ", ""))
+
+combined <- tibble(str_c(coauthors, journal, tb$paper, sep=" "))
 
 ```
 
@@ -81,35 +130,3 @@ paper_words <- titles %>%
   count()
 
 ```
-
-
-```{r}
-source('lib/feature_extraction.R')
-term_frequency <- tf(test_case, citationVocab)
-
-```
-
-Add a new chunk by clicking the *Insert Chunk* button on the toolbar or by pressing *Cmd+Option+I*.
-```{r}
-
-```
-
-```{r}
-
-```
-
-
-```{r}
-
-
-citation_vector <- c("A Kumar","L Zhao","T Camp",
-                     "M Stonebraker","M Rabinovich","E Stohr",
-                     "V Christophedes","R Hull","J Simeon") # citation vector
-M <- c(0,0,0,
-       0,1,0,
-       0,0,1) # Rabinovich and Simeon appear as co-authors in citation M
-
-v <- length(citation_vector) # vocab size
-```
-
-When you save the notebook, an HTML file containing the code and output will be saved alongside it (click the *Preview* button or press *Cmd+Shift+K* to preview the HTML file).
