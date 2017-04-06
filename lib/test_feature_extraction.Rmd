@@ -3,40 +3,38 @@ title: "Script to test feature extraction"
 output: html_notebook
 ---
 
-### Step 0: Load output file
+### Step 0: Setup project directory
 First we have to construct a citation vector from the co-author column of our dataset
-```{r warning=FALSE}
-AKumar <- read_csv("../output/AKumar.csv")
-authors <- AKumar$Coauthor
-title <- AKumar$Paper
-publication <- AKumar$Journal
+```{r "setup", include=TRUE}
+require("knitr")
+opts_knit$set(root.dir = normalizePath(".."))
+projDir <- opts_knit$get("root.dir")
+projDir
 ```
-
 
 ### Step 1: Create document term matrix
 We use the `tm` package to create a corpus of the title strings.
 ```{r}
-library(tm)
-docs <- as.vector(AKumar$Paper)
-source <- VectorSource(docs)
-stop_words = stopwords(kind = "en")
-corpus <- SimpleCorpus(source, control = list(language = "en",
-                                              removeWords = stop_words,
-                                              removeNumbers = TRUE,
-                                              stemming = TRUE))
-dtm_title <- DocumentTermMatrix(corpus)
-dim(dtm_title)
+source('lib/feature_extraction.R')
+exFilePath <- file.path(projDir,'output','JRobinson.csv')
+dtm <- createDocumentTermMatrix(exFilePath)
 ```
 
 ### Step 2: Tidy the document term matrix
 The `tidytext` package allows us to reformat a `tm::DocumentTermMatrix` object into a tidy data frame.
 ```{r}
-library(tidytext)
-td_dtm_title <- tidy(dtm_title)
-head(td_dtm_title)
+cdtm <- dtm %>%
+  count(term)
+
+gdtm <- dtm %>%
+  group_by(term) %>%
+  count(document)
 ```
 
-### Step 3: 
+### Step 3: Cosine similarity
+$$
+similarity = cos(\theta) = \frac{A \cdot B}{\begin{Vmatrix}A\end{Vmatrix} \begin{Vmatrix}B\end{Vmatrix}} = \frac{\sum_{i=1}^n A_i B_i}{\sqrt{\sum_{i=1}^n A_i^2} \sqrt{\sum_{i=1}^n B_i^2}}
+$$
 ```{r}
 
 ```
