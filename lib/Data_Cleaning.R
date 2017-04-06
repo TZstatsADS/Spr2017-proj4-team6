@@ -13,21 +13,16 @@ AKumar <- data.frame(
     sep=">",
     quiet=TRUE),
   stringsAsFactors=FALSE)
-# This need to be modified for different name set
-
-# extract canonical author id befor "_"
 AKumar$AuthorID <- sub("_.*","",AKumar$Coauthor)
-# extract paper number under same author between "_" and first whitespace
 AKumar$PaperNO <- sub(".*_(\\w*)\\s.*", "\\1", AKumar$Coauthor)
-# delete "<" in AKumar$Coauthor, you may need to further process the coauthor
-# term depending on the method you are using
 AKumar$Coauthor <- gsub("<","",sub("^.*?\\s","", AKumar$Coauthor))
-# delete "<" in AKumar$Paper
 AKumar$Paper <- gsub("<","",AKumar$Paper)
-# add PaperID for furthur use, you may want to combine all the nameset files and 
-# then assign the unique ID for all the citations
 AKumar$PaperID <- rownames(AKumar)
 
+AKumar$QuestAuthor <- "A Kumar"
+AKumar$Coauthor <- gsub(";*A Kumar[[:blank:]]*;*", "", AKumar$Coauthor)
+AKumar_new <- AKumar[,c(4, 5, 7, 1, 2, 3)]
+AKumar_new <- arrange(AKumar_new, as.numeric(AuthorID), as.numeric(PaperNO))
 
 # For AGupta (577 lines), there're several issues, "EOF within quoted string"
 # "number of items read is not a multiple of the number of columns" 
@@ -35,10 +30,7 @@ AKumar$PaperID <- rownames(AKumar)
 # "4_48 A Gupta;Damon Kaller ; Thomas C Shermer<>Linear-Time Algorithms for Partial <i>k</i>-Tree Complements <>Algorithmica"
 #6_44 A Gupta;Alistair Sinclair ; Ilan Newman ; Yuri Rabinovich<>Cuts, Trees and l<sub> </sub>-Embeddings of Graphs <>FOCS IEEE Symposium Foundations of Computer Science
 a <- readLines("../data/nameset/AGupta.txt", encoding = "latin1")
-#a <- gsub("<i>k</i>", "k", a, perl=TRUE)
 a <- gsub("<[/|[:alpha:]]+>", "", a)
-# a
-# a <- c("4_48 A Gupta;Damon Kaller ; Thomas C Shermer<>Linear-Time Algorithms for Partial <i>k</i>-Tree Complements <>Algorithmica")
 AGupta <- data.frame(
   scan(
     text = a,
@@ -53,20 +45,23 @@ AGupta$Coauthor <- gsub("<","",sub("^.*?\\s","", AGupta$Coauthor))
 AGupta$Paper <- gsub("<","",AGupta$Paper)
 AGupta$PaperID <- rownames(AGupta)
 
+AGupta$QuestAuthor <- "A Gupta"
+AGupta$Coauthor <- gsub(";*A Gupta[[:blank:]]*;*", "", AGupta$Coauthor)
+AGupta_new <- AGupta[,c(4, 5, 7, 1, 2, 3)]
+AGupta_new <- arrange(AGupta_new, as.numeric(AuthorID), as.numeric(PaperNO))
 
-
-
-
-# CChen 801 lines. By looking at dataset, 38_0 should be deleted, 39_1 has different format than others.
+# CChen 800 lines. By looking at dataset, 38_0 should be deleted (title and jornal empty), 39_1 has different format than others.
+a <- readLines("../data/nameset/CChen.txt", encoding = "latin1")
+a <- gsub("<[/|[:alpha:]]+>", "", a)
 CChen <- data.frame(
   scan(
-    file.path("..", "data", "nameset", "CChen.txt", fsep = .Platform$file.sep),
+    text = a,
     what = list(Coauthor = "", Paper = "", Journal = ""),
     sep=">",
     quiet=TRUE,
     quote = NULL),
   stringsAsFactors=FALSE)
-CChen <- CChen[-600, ]
+CChen <- CChen[-599, ]
 CChen[602, ] <- c("39_1 C Chen;", "The Complexity of Propositional Modal Theories and the Complexity of Consistency of Propositional Modal Theories <"," LFCS" )
 CChen$AuthorID <- sub("_.*","",CChen$Coauthor)
 CChen$PaperNO <- sub(".*_(\\w*)\\s.*", "\\1", CChen$Coauthor)
@@ -74,35 +69,39 @@ CChen$Coauthor <- gsub("<","",sub("^.*?\\s","", CChen$Coauthor))
 CChen$Paper <- gsub("<","",CChen$Paper)
 CChen$PaperID <- rownames(CChen)
 
+CChen$QuestAuthor <- "C Chen"
+CChen$Coauthor <- gsub(";*C Chen[[:blank:]]*;*", "", CChen$Coauthor)
+CChen_new <- CChen[,c(4, 5, 7, 1, 2, 3)]
+CChen_new <- arrange(CChen_new, as.numeric(AuthorID), as.numeric(PaperNO))
+
 # 368 for DJohnson
-d <- readLines("../data/nameset/DJohnson.txt", encoding = "latin1")
+a <- readLines("../data/nameset/DJohnson.txt", encoding = "latin1")
 DJohnson <- data.frame(
   scan(
-    text = d, 
+    text = a, 
     what = list(Coauthor = "", Paper = "", Journal = ""),
     sep=">",
     quote = NULL, 
     quiet=TRUE),
   stringsAsFactors=FALSE)
 DJohnson$AuthorID <- sub("_.*","",DJohnson$Coauthor)
-# extract paper number under same author between "_" and first whitespace
 DJohnson$PaperNO <- sub(".*_(\\w*)\\s.*", "\\1", DJohnson$Coauthor)
-# delete "<" in DJohnson$Coauthor, you may need to further process the coauthor
-# term depending on the method you are using
 DJohnson$Coauthor <- gsub("<","",sub("^.*?\\s","", DJohnson$Coauthor))
-# delete "<" in DJohnson$Paper
 DJohnson$Paper <- gsub("<","",DJohnson$Paper)
-# add PaperID for furthur use, you may want to combine all the nameset files and 
-# then assign the unique ID for all the citations
 DJohnson$PaperID <- rownames(DJohnson)
+
+DJohnson$QuestAuthor <- "D Johnson"
+DJohnson$Coauthor <- gsub(";*D Johnson[[:blank:]]*;*", "", DJohnson$Coauthor)
+DJohnson_new <- DJohnson[,c(4, 5, 7, 1, 2, 3)]
+DJohnson_new <- arrange(DJohnson_new, as.numeric(AuthorID), as.numeric(PaperNO))
 
 
 # 1419 lines for JLee
-j <- readLines("../data/nameset/JLee.txt", encoding = "latin1")
-j <- gsub("<[/|[:alpha:]]+>", "", j)
+a <- readLines("../data/nameset/JLee.txt", encoding = "latin1")
+a <- gsub("<[/|[:alpha:]]+>", "", a)
 JLee <- data.frame(
   scan(
-    text = j,
+    text = a,
     what = list(Coauthor = "", Paper = "", Journal = ""),
     sep=">",
     quote = NULL, 
@@ -114,6 +113,10 @@ JLee$Coauthor <- gsub("<","",sub("^.*?\\s","", JLee$Coauthor))
 JLee$Paper <- gsub("<","",JLee$Paper)
 JLee$PaperID <- rownames(JLee)
 
+JLee$QuestAuthor <- "J Lee"
+JLee$Coauthor <- gsub(";*J Lee[[:blank:]]*;*", "", JLee$Coauthor)
+JLee_new <- JLee[,c(4, 5, 7, 1, 2, 3)]
+JLee_new <- arrange(JLee_new, as.numeric(AuthorID), as.numeric(PaperNO))
 
 # 122 lines for JMartin
 JMartin <- data.frame(
@@ -131,12 +134,17 @@ JMartin$Coauthor <- gsub("<","",sub("^.*?\\s","", JMartin$Coauthor))
 JMartin$Paper <- gsub("<","",JMartin$Paper)
 JMartin$PaperID <- rownames(JMartin)
 
+JMartin$QuestAuthor <- "J Martin"
+JMartin$Coauthor <- gsub(";*J Martin[[:blank:]]*;*", "", JMartin$Coauthor)
+JMartin_new <- JMartin[,c(4, 5, 7, 1, 2, 3)]
+JMartin_new <- arrange(JMartin_new, as.numeric(AuthorID), as.numeric(PaperNO))
+
 # 171 lines with <i> k </i> issue
-j <- readLines("../data/nameset/JRobinson.txt", encoding = "latin1")
-j <- gsub("<[/|[:alpha:]]+>", "", j)
+a <- readLines("../data/nameset/JRobinson.txt", encoding = "latin1")
+a <- gsub("<[/|[:alpha:]]+>", "", a)
 JRobinson <- data.frame(
   scan(
-    text = j, 
+    text = a, 
     what = list(Coauthor = "", Paper = "", Journal = ""),
     sep=">",
     quote = NULL, 
@@ -148,12 +156,17 @@ JRobinson$Coauthor <- gsub("<","",sub("^.*?\\s","", JRobinson$Coauthor))
 JRobinson$Paper <- gsub("<","",JRobinson$Paper)
 JRobinson$PaperID <- rownames(JRobinson)
 
+JRobinson$QuestAuthor <- "J Robinson"
+JRobinson$Coauthor <- gsub(";*J Robinson[[:blank:]]*;*", "", JRobinson$Coauthor)
+JRobinson_new <- JRobinson[,c(4, 5, 7, 1, 2, 3)]
+JRobinson_new <- arrange(JRobinson_new, as.numeric(AuthorID), as.numeric(PaperNO))
+
 # 927 for JSmith
-j <- readLines("../data/nameset/JSmith.txt", encoding = "latin1")
-j <- gsub("<[/|[:alpha:]]+>", "", j)
+a <- readLines("../data/nameset/JSmith.txt", encoding = "latin1")
+a <- gsub("<[/|[:alpha:]]+>", "", a)
 JSmith <- data.frame(
   scan(
-    text = j, 
+    text = a, 
     what = list(Coauthor = "", Paper = "", Journal = ""),
     sep=">",
     quote = NULL, 
@@ -165,12 +178,17 @@ JSmith$Coauthor <- gsub("<","",sub("^.*?\\s","", JSmith$Coauthor))
 JSmith$Paper <- gsub("<","",JSmith$Paper)
 JSmith$PaperID <- rownames(JSmith)
 
+JSmith$QuestAuthor <- "J Smith"
+JSmith$Coauthor <- gsub(";*J Smith[[:blank:]]*;*", "", JSmith$Coauthor)
+JSmith_new <- JSmith[,c(4, 5, 7, 1, 2, 3)]
+JSmith_new <- arrange(JSmith_new, as.numeric(AuthorID), as.numeric(PaperNO))
+
 # 280 lines for KTanaka
-j <- readLines("../data/nameset/KTanaka.txt", encoding = "latin1")
-j <- gsub("<[/|[:alpha:]]+>", "", j)
+a <- readLines("../data/nameset/KTanaka.txt", encoding = "latin1")
+a <- gsub("<[/|[:alpha:]]+>", "", a)
 KTanaka <- data.frame(
   scan(
-    text = j, 
+    text = a, 
     what = list(Coauthor = "", Paper = "", Journal = ""),
     sep=">",
     quote = NULL, 
@@ -182,13 +200,16 @@ KTanaka$Coauthor <- gsub("<","",sub("^.*?\\s","", KTanaka$Coauthor))
 KTanaka$Paper <- gsub("<","",KTanaka$Paper)
 KTanaka$PaperID <- rownames(KTanaka)
 
-
+KTanaka$QuestAuthor <- "K Tanaka"
+KTanaka$Coauthor <- gsub(";*K Tanaka[[:blank:]]*;*", "", KTanaka$Coauthor)
+KTanaka_new <- KTanaka[,c(4, 5, 7, 1, 2, 3)]
+KTanaka_new <- arrange(KTanaka_new, as.numeric(AuthorID), as.numeric(PaperNO))
 # 153 lines for MBrown
-j <- readLines("../data/nameset/MBrown.txt", encoding = "latin1")
-j <- gsub("<[/|[:alpha:]]+>", "", j)
+a <- readLines("../data/nameset/MBrown.txt", encoding = "latin1")
+a <- gsub("<[/|[:alpha:]]+>", "", a)
 MBrown <- data.frame(
   scan(
-    text = j, 
+    text = a, 
     what = list(Coauthor = "", Paper = "", Journal = ""),
     sep=">",
     quote = NULL, 
@@ -200,13 +221,17 @@ MBrown$Coauthor <- gsub("<","",sub("^.*?\\s","", MBrown$Coauthor))
 MBrown$Paper <- gsub("<","",MBrown$Paper)
 MBrown$PaperID <- rownames(MBrown)
 
+MBrown$QuestAuthor <- "M Brown"
+MBrown$Coauthor <- gsub(";*M Brown[[:blank:]]*;*", "", MBrown$Coauthor)
+MBrown_new <- MBrown[,c(4, 5, 7, 1, 2, 3)]
+MBrown_new <- arrange(MBrown_new, as.numeric(AuthorID), as.numeric(PaperNO))
 
 #  260 lines for MJones
-j <- readLines("../data/nameset/MJones.txt", encoding = "latin1")
-j <- gsub("<[/|[:alpha:]]+>", "", j)
+a <- readLines("../data/nameset/MJones.txt", encoding = "latin1")
+a <- gsub("<[/|[:alpha:]]+>", "", a)
 MJones <- data.frame(
   scan(
-    text = j, 
+    text = a, 
     what = list(Coauthor = "", Paper = "", Journal = ""),
     sep=">",
     quote = NULL, 
@@ -218,13 +243,17 @@ MJones$Coauthor <- gsub("<","",sub("^.*?\\s","", MJones$Coauthor))
 MJones$Paper <- gsub("<","",MJones$Paper)
 MJones$PaperID <- rownames(MJones)
 
+MJones$QuestAuthor <- "M Jones"
+MJones$Coauthor <- gsub(";*M Jones[[:blank:]]*;*", "", MJones$Coauthor)
+MJones_new <- MJones[,c(4, 5, 7, 1, 2, 3)]
+MJones_new <- arrange(MJones_new, as.numeric(AuthorID), as.numeric(PaperNO))
 
 # MMiller 412 lines
-j <- readLines("../data/nameset/MMiller.txt", encoding = "latin1")
-j <- gsub("<[/|[:alpha:]]+>", "", j)
+a <- readLines("../data/nameset/MMiller.txt", encoding = "latin1")
+a <- gsub("<[/|[:alpha:]]+>", "", a)
 MMiller <- data.frame(
   scan(
-    text = j, 
+    text = a, 
     what = list(Coauthor = "", Paper = "", Journal = ""),
     sep=">",
     quote = NULL, 
@@ -236,14 +265,18 @@ MMiller$Coauthor <- gsub("<","",sub("^.*?\\s","", MMiller$Coauthor))
 MMiller$Paper <- gsub("<","",MMiller$Paper)
 MMiller$PaperID <- rownames(MMiller)
 
+MMiller$QuestAuthor <- "M Miller"
+MMiller$Coauthor <- gsub(";*M Miller[[:blank:]]*;*", "", MMiller$Coauthor)
+MMiller_new <- MMiller[,c(4, 5, 7, 1, 2, 3)]
+MMiller_new <- arrange(MMiller_new, as.numeric(AuthorID), as.numeric(PaperNO))
 
 # SLee 1464
 
-j <- readLines("../data/nameset/SLee.txt", encoding = "latin1")
-j <- gsub("<[/|[:alpha:]]+>", "", j)
+a <- readLines("../data/nameset/SLee.txt", encoding = "latin1")
+a <- gsub("<[/|[:alpha:]]+>", "", a)
 SLee <- data.frame(
   scan(
-    text = j, 
+    text = a, 
     what = list(Coauthor = "", Paper = "", Journal = ""),
     sep=">",
     quote = NULL, 
@@ -255,12 +288,18 @@ SLee$Coauthor <- gsub("<","",sub("^.*?\\s","", SLee$Coauthor))
 SLee$Paper <- gsub("<","",SLee$Paper)
 SLee$PaperID <- rownames(SLee)
 
+SLee$QuestAuthor <- "S Lee"
+SLee$Coauthor <- gsub(";*S Lee[[:blank:]]*;*", "", SLee$Coauthor)
+SLee_new <- SLee[,c(4, 5, 7, 1, 2, 3)]
+
+SLee_new <- arrange(SLee_new, as.numeric(AuthorID), as.numeric(PaperNO))
+
 #YChen 1265
-j <- readLines("../data/nameset/YChen.txt", encoding = "latin1")
-j <- gsub("<[/|[:alpha:]]+>", "", j)
+a <- readLines("../data/nameset/YChen.txt", encoding = "latin1")
+a <- gsub("<[/|[:alpha:]]+>", "", a)
 YChen <- data.frame(
   scan(
-    text = j, 
+    text = a, 
     what = list(Coauthor = "", Paper = "", Journal = ""),
     sep=">",
     quote = NULL, 
@@ -272,18 +311,23 @@ YChen$Coauthor <- gsub("<","",sub("^.*?\\s","", YChen$Coauthor))
 YChen$Paper <- gsub("<","",YChen$Paper)
 YChen$PaperID <- rownames(YChen)
 
+YChen$QuestAuthor <- "Y Chen"
+YChen$Coauthor <- gsub(";*Y Chen[[:blank:]]*;*", "", YChen$Coauthor)
+YChen_new <- YChen[,c(4, 5, 7, 1, 2, 3)]
+YChen_new <- arrange(YChen_new, as.numeric(AuthorID), as.numeric(PaperNO))
 
-write.csv(AGupta, file = "../output/Agupta.csv")
-write.csv(AKumar, file = "../output/AKumar.csv")
-write.csv(CChen, file = "../output/CChen.csv")
-write.csv(DJohnson, file = "../output/DJohnson.csv")
-write.csv(JLee, file = "../output/JLee.csv")
-write.csv(JMartin, file = "../output/JMartin.csv")
-write.csv(JRobinson, file = "../output/JRobinson.csv")
-write.csv(JSmith, file = "../output/JSmith.csv")
-write.csv(KTanaka, file = "../output/KTanaka.csv")
-write.csv(MBrown, file = "../output/MBrown.csv")
-write.csv(MJones, file = "../output/MJones.csv")
-write.csv(MMiller, file = "../output/MMiller.csv")
-write.csv(SLee, file = "../output/SLee.csv")
-write.csv(YChen, file = "../output/YChen.csv")
+
+write.csv(AGupta_new, file = "../output/Agupta.csv")
+write.csv(AKumar_new, file = "../output/AKumar.csv")
+write.csv(CChen_new, file = "../output/CChen.csv")
+write.csv(DJohnson_new, file = "../output/DJohnson.csv")
+write.csv(JLee_new, file = "../output/JLee.csv")
+write.csv(JMartin_new, file = "../output/JMartin.csv")
+write.csv(JRobinson_new, file = "../output/JRobinson.csv")
+write.csv(JSmith_new, file = "../output/JSmith.csv")
+write.csv(KTanaka_new, file = "../output/KTanaka.csv")
+write.csv(MBrown_new, file = "../output/MBrown.csv")
+write.csv(MJones_new, file = "../output/MJones.csv")
+write.csv(MMiller_new, file = "../output/MMiller.csv")
+write.csv(SLee_new, file = "../output/SLee.csv")
+write.csv(YChen_new, file = "../output/YChen.csv")
