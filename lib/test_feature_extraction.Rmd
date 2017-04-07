@@ -19,12 +19,13 @@ source('lib/feature_extraction.R')
 exFilePath <- file.path(projDir,'output','MBrown.csv')
 text <- readTextFile(exFilePath)
 authorId <- text$AuthorID
-dtm <- createDocumentTermMatrix(text)
+dtm <- createCitationMatrix(text)
 dtm_train_tfidf <- weightTfIdf(dtm,normalize = TRUE)
 ```
 
 ### Step 2: Run teacher's clustering algorithm from `kernlab` package
 ```{r, include=FALSE}
+library(kernlab)
 start.time <- Sys.time()
 result_sclust <- specc(as.matrix(dtm_train_tfidf), 
                        centers=length(unique(authorId)))
@@ -35,6 +36,7 @@ time_sclust <- end.time - start.time
 ### Step 3: Run our spectral clustering algorithm in `lib/SpectralClustering.R`
 ```{r include=FALSE}
 source("lib/SpectralClustering.R")
+library(qlcMatrix)
 start.time <- Sys.time()
 docsdissim <- cosSparse(t(as.matrix(dtm_train_tfidf)))
 ## apply K-WAY SPECTRAL CLUSTERING
@@ -76,15 +78,19 @@ $$
 
 
 ```{r}
+library(stringr)
 tb<- createCitationMatrix(text)
-coauthors <- tb %>%
-  transmute(coauthor = str_replace_all(coauthor, " ", "")) %>%
-  transmute(coauthor = str_replace_all(coauthor, ";", " "))
+term <- tb %>%
+  mutate(coauthor = str_replace_all(coauthor, " ", "")) %>%
+  mutate(coauthor = str_replace_all(coauthor, ";", " ")) %>%
+  mutate(journal = str_replace_all(journal, " ", "")) %>%
+  mutate(term_col = paste(coauthor, journal, paper))
 
-journal <- tb %>%
-  transmute(journal = str_replace_all(journal, " ", ""))
-
-combined <- tibble(str_c(coauthors, journal, tb$paper, sep=" "))
+docs <- as.vector(term$term_col)
+# journal <- tb %>%
+#   transmute(journal = str_replace_all(journal, " ", ""))
+# 
+# combined <- paste(coauthors,journal,tb$paper)
 
 ```
 
