@@ -34,3 +34,42 @@ createCitationMatrix <- function(text){
   dtm <- DocumentTermMatrix(corpus)
   return(dtm)
 }
+
+# wrapper function for teacher's clustering method
+runTeacherClusteringMethod <- function(tfidf, numAuthors){
+  # specc method from kernlab
+  r <- specc(as.matrix(tfidf), centers=numAuthors)
+  return(r)
+}
+
+# wrapper function for our clustering method (Paper #3)
+runPaperThreeClusteringMethod <- function(tfidf, numAuthors){
+  # cosSparse method relies on the qlcMatrix library
+  docsdissim <- cosSparse(t(as.matrix(dtm_train_tfidf)))
+  
+  ## apply k-way spectral clustering
+  r <- specClustering(as.matrix(docsdissim), numAuthors)
+  return(r)
+}
+
+runAuthorStudy <- function(filePath){
+  text <- read_csv(filePath)
+  dtm <- createCitationMatrix(text)
+  tfidf <- weightTfIdf(dtm,normalize = FALSE)
+  
+  num_authors <- length(unique(text$AuthorID))
+  
+  start.time <- Sys.time()
+  result0 <- runTeacherClusteringMethod(tfidf, num_authors)
+  end.time <- Sys.time()
+  t1 <- end.time - start.time
+  
+  return()
+}
+
+runAuthorStudyDummy <- function(filePath){
+  accuracy <- runif(1, 1.0, 3.0)
+  precision <- runif(1, 0.0, 1.0)
+  recall <- runif(1, 20, 50)
+  return(c(accuracy,precision,recall))
+}

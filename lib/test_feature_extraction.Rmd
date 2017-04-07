@@ -8,7 +8,7 @@ First we have to construct a citation vector from the co-author column of our da
 ```{r "setup", include=FALSE}
 packages.used=c("knitr", "tidyr", "tidytext",
                 "kernlab", "dplyr", "readr",
-                "tm", "tibble", "stringr")
+                "tm", "tibble", "stringr", "qlcMatrix")
 
 # check packages that need to be installed.
 packages.needed=setdiff(packages.used, 
@@ -28,6 +28,7 @@ library(readr)
 library(tm)
 library(tibble)
 library(stringr)
+library(qlcMatrix)
 
 opts_knit$set(root.dir = normalizePath(".."))
 projDir <- opts_knit$get("root.dir")
@@ -36,13 +37,15 @@ projDir
 
 ### Step 1: Create document term matrix
 We use the `tm` package to create a corpus of the title strings.
-```{r}
+```{r include=FALSE}
 source(file.path(projDir,'lib','feature_extraction.R'))
-exFilePath <- file.path(projDir,'output','MBrown.csv')
+files <- list.files(file.path(projDir,"output"), pattern = "*.csv")
+
+exFilePath <- file.path(projDir,'output','AKumar.csv')
 text <- readTextFile(exFilePath)
 authorId <- text$AuthorID
 dtm <- createCitationMatrix(text)
-dtm_train_tfidf <- weightTfIdf(dtm,normalize = TRUE)
+dtm_train_tfidf <- weightTfIdf(dtm,normalize = FALSE)
 ```
 
 ### Step 2: Run teacher's clustering algorithm from `kernlab` package
@@ -57,7 +60,6 @@ time_sclust <- end.time - start.time
 ### Step 3: Run our spectral clustering algorithm in `lib/SpectralClustering.R`
 ```{r include=FALSE}
 source(file.path(projDir,"lib","SpectralClustering.R"))
-library(qlcMatrix)
 start.time <- Sys.time()
 docsdissim <- cosSparse(t(as.matrix(dtm_train_tfidf)))
 ## apply K-WAY SPECTRAL CLUSTERING
@@ -69,7 +71,7 @@ time_sQRclust <- end.time - start.time
 
 ### Step 4: Run evaluation metrics on both methods and compare
 ```{r}
-source(file.path(projDir,"lib",'lib/evaluation_measures.R'))
+source(file.path(projDir,"lib",'evaluation_measures.R'))
 matching_matrix_sclust <- matching_matrix(authorId,result_sclust)
 matching_matrix_sQRclust <- matching_matrix(authorId, result_sQRclust)
 performance_sclust <- performance_statistics(matching_matrix_sclust)
@@ -86,6 +88,46 @@ compare_df <- data.frame(method=c("Teacher","Group_6"),
                          time=c(time_sclust,time_sQRclust))
 kable(compare_df,caption="Comparision of performance for two clustering methods",digits = 2)
 ```
+
+```{r}
+files <- list.files(file.path(projDir,"output"), pattern = "*.csv")
+
+n <- length(files)
+df<-tibble()
+  
+  #row.names = c("Precision", "Recall", "Accuracy")) # x='string',y=1:10,z='string'
+
+
+for(i in 1:n){
+  x <- runAuthorStudyDummy(files[i])
+  print(paste(x[1], x[2], x[3]))
+  add_row(df, accuracy=x[1], precision=x[2], recall=x[3])
+}
+
+
+```
+
+```{r}
+df <- tibble(x = 1:3, y = 3:1)
+dim(df)
+df[3,1]="1231"
+
+```
+
+
+```{r}
+
+data.frame([], row.names = c("Precision", "Recall", "Accuracy"))
+r <- 3
+newrow <- seq(4)
+insertRow <- function(existingDF, newrow, r) {
+  existingDF[seq(r+1,nrow(existingDF)+1),] <- existingDF[seq(r,nrow(existingDF)),]
+  existingDF[r,] <- newrow
+  existingDF
+}
+
+```
+
 
 SCRATCH WORK
 -----------------------------------------------------------------------------------------------------------------------
