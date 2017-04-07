@@ -4,6 +4,36 @@
 #               "JRobinson.txt", "JSmith.txt", "KTanaka.txt", "MBrown.txt", "MJones.txt", 
 #               "MMiller.txt", "SLee.txt", "YChen.txt")
 
+library(dplyr)
+
+# -----------------------------------------------------------
+# write a function to convert coauthor names into first initial combined with last name
+#---
+# the input parameter author is a vector contains all authors related to main author name
+# the name parameter is the name of main author
+# the return of the function is a list with main author's name removed from coauthor
+#---
+conv_initial <- function(author, name) {
+  for(j in 1:length(author)){
+    if(nchar(author[j])>0){
+      nam = strsplit(author[j], " ")[[1]]
+      if(nchar(nam[1])>0){
+        first.ini=substring(nam[1], 1, 1)
+      }else{
+        first.ini=substring(nam[2], 1, 1)
+      }
+    }
+    last.name=nam[length(nam)]
+    nam.str = paste(first.ini, last.name)
+    author[j]=nam.str
+  }
+  match_ind = charmatch(name, author, nomatch=-1)
+  if(match_ind>0){
+    author=author[-match_ind]
+  }
+  return(author)
+}
+#-------------------------------------------------------------
 
 
 AKumar <- data.frame(
@@ -20,9 +50,14 @@ AKumar$Paper <- gsub("<","",AKumar$Paper)
 AKumar$PaperID <- rownames(AKumar)
 
 AKumar$QuestAuthor <- "A Kumar"
-AKumar$Coauthor <- gsub(";*A Kumar[[:blank:]]*;*", "", AKumar$Coauthor)
-AKumar_new <- AKumar[,c(4, 5, 7, 1, 2, 3)]
-AKumar_new <- arrange(AKumar_new, as.numeric(AuthorID), as.numeric(PaperNO))
+x_list <- strsplit(AKumar$Coauthor, "; ")
+coauthor_list <- sapply(x_list, conv_initial, name = "A Kumar")
+coauthor_vec <- sapply(coauthor_list, paste, collapse = '; ')
+AKumar$Coauthor <- coauthor_vec
+
+# AKumar$Coauthor <- gsub(";*A Kumar[[:blank:]]*;*", "", AKumar$Coauthor)
+AKumar  <- AKumar[,c(4, 5, 7, 1, 2, 3)]
+AKumar  <- arrange(AKumar , as.numeric(AuthorID), as.numeric(PaperNO))
 
 # For AGupta (577 lines), there're several issues, "EOF within quoted string"
 # "number of items read is not a multiple of the number of columns" 
@@ -46,9 +81,15 @@ AGupta$Paper <- gsub("<","",AGupta$Paper)
 AGupta$PaperID <- rownames(AGupta)
 
 AGupta$QuestAuthor <- "A Gupta"
-AGupta$Coauthor <- gsub(";*A Gupta[[:blank:]]*;*", "", AGupta$Coauthor)
-AGupta_new <- AGupta[,c(4, 5, 7, 1, 2, 3)]
-AGupta_new <- arrange(AGupta_new, as.numeric(AuthorID), as.numeric(PaperNO))
+x_list <- strsplit(AGupta$Coauthor, "; ")
+coauthor_list <- sapply(x_list, conv_initial, name = "A Gupta")
+coauthor_vec <- sapply(coauthor_list, paste, collapse = '; ')
+AGupta$Coauthor <- coauthor_vec
+# AGupta$Coauthor <- gsub(";*A Gupta[[:blank:]]*;*", "", AGupta$Coauthor)
+AGupta <- AGupta[,c(4, 5, 7, 1, 2, 3)]
+AGupta <- arrange(AGupta, as.numeric(AuthorID), as.numeric(PaperNO))
+
+
 
 # CChen 800 lines. By looking at dataset, 38_0 should be deleted (title and jornal empty), 39_1 has different format than others.
 a <- readLines("../data/nameset/CChen.txt", encoding = "latin1")
@@ -70,9 +111,14 @@ CChen$Paper <- gsub("<","",CChen$Paper)
 CChen$PaperID <- rownames(CChen)
 
 CChen$QuestAuthor <- "C Chen"
-CChen$Coauthor <- gsub(";*C Chen[[:blank:]]*;*", "", CChen$Coauthor)
-CChen_new <- CChen[,c(4, 5, 7, 1, 2, 3)]
-CChen_new <- arrange(CChen_new, as.numeric(AuthorID), as.numeric(PaperNO))
+x_list <- strsplit(CChen$Coauthor, "; ")
+coauthor_list <- sapply(x_list, conv_initial, name = "C Chen")
+coauthor_vec <- sapply(coauthor_list, paste, collapse = '; ')
+CChen$Coauthor <- coauthor_vec
+
+# CChen$Coauthor <- gsub(";*C Chen[[:blank:]]*;*", "", CChen$Coauthor)
+CChen <- CChen[,c(4, 5, 7, 1, 2, 3)]
+CChen <- arrange(CChen, as.numeric(AuthorID), as.numeric(PaperNO))
 
 # 368 for DJohnson
 a <- readLines("../data/nameset/DJohnson.txt", encoding = "latin1")
@@ -91,9 +137,14 @@ DJohnson$Paper <- gsub("<","",DJohnson$Paper)
 DJohnson$PaperID <- rownames(DJohnson)
 
 DJohnson$QuestAuthor <- "D Johnson"
-DJohnson$Coauthor <- gsub(";*D Johnson[[:blank:]]*;*", "", DJohnson$Coauthor)
-DJohnson_new <- DJohnson[,c(4, 5, 7, 1, 2, 3)]
-DJohnson_new <- arrange(DJohnson_new, as.numeric(AuthorID), as.numeric(PaperNO))
+
+x_list <- strsplit(DJohnson$Coauthor, "; ")
+coauthor_list <- sapply(x_list, conv_initial, name = "D Johnson")
+coauthor_vec <- sapply(coauthor_list, paste, collapse = '; ')
+DJohnson$Coauthor <- coauthor_vec
+# DJohnson$Coauthor <- gsub(";*D Johnson[[:blank:]]*;*", "", DJohnson$Coauthor)
+DJohnson <- DJohnson[,c(4, 5, 7, 1, 2, 3)]
+DJohnson <- arrange(DJohnson, as.numeric(AuthorID), as.numeric(PaperNO))
 
 
 # 1419 lines for JLee
@@ -110,15 +161,21 @@ JLee <- data.frame(
 JLee$AuthorID <- sub("_.*","",JLee$Coauthor)
 JLee$PaperNO <- sub(".*_(\\w*)\\s.*", "\\1", JLee$Coauthor)
 JLee$Coauthor <- gsub("<","",sub("^.*?\\s","", JLee$Coauthor))
+JLee$Coauthor <- gsub(";[[:blank:]]*", "; ", JLee$Coauthor)
 JLee$Paper <- gsub("<","",JLee$Paper)
 JLee$PaperID <- rownames(JLee)
 
 JLee$QuestAuthor <- "J Lee"
-JLee$Coauthor <- gsub(";*J Lee[[:blank:]]*;*", "", JLee$Coauthor)
-JLee_new <- JLee[,c(4, 5, 7, 1, 2, 3)]
-JLee_new <- arrange(JLee_new, as.numeric(AuthorID), as.numeric(PaperNO))
 
-# 122 lines for JMartin
+# x_list <- strsplit(JLee$Coauthor, "; ")
+# coauthor_list <- sapply(x_list, conv_initial, name = "J Lee")
+# coauthor_vec <- sapply(coauthor_list, paste, collapse = '; ')
+# JLee$Coauthor <- coauthor_vec
+JLee$Coauthor <- gsub(";*J Lee[[:blank:]]*;*", "", JLee$Coauthor)
+JLee <- JLee[,c(4, 5, 7, 1, 2, 3)]
+JLee <- arrange(JLee, as.numeric(AuthorID), as.numeric(PaperNO))
+
+# 112 lines for JMartin
 JMartin <- data.frame(
   scan(
     file.path("..","data","nameset","JMartin.txt", fsep = .Platform$file.sep),
@@ -135,9 +192,14 @@ JMartin$Paper <- gsub("<","",JMartin$Paper)
 JMartin$PaperID <- rownames(JMartin)
 
 JMartin$QuestAuthor <- "J Martin"
-JMartin$Coauthor <- gsub(";*J Martin[[:blank:]]*;*", "", JMartin$Coauthor)
-JMartin_new <- JMartin[,c(4, 5, 7, 1, 2, 3)]
-JMartin_new <- arrange(JMartin_new, as.numeric(AuthorID), as.numeric(PaperNO))
+
+x_list <- strsplit(JMartin$Coauthor, "; ")
+coauthor_list <- sapply(x_list, conv_initial, name = "J Martin")
+coauthor_vec <- sapply(coauthor_list, paste, collapse = '; ')
+JMartin$Coauthor <- coauthor_vec
+# JMartin$Coauthor <- gsub(";*J Martin[[:blank:]]*;*", "", JMartin$Coauthor)
+JMartin  <- JMartin[,c(4, 5, 7, 1, 2, 3)]
+JMartin  <- arrange(JMartin , as.numeric(AuthorID), as.numeric(PaperNO))
 
 # 171 lines with <i> k </i> issue
 a <- readLines("../data/nameset/JRobinson.txt", encoding = "latin1")
@@ -157,9 +219,14 @@ JRobinson$Paper <- gsub("<","",JRobinson$Paper)
 JRobinson$PaperID <- rownames(JRobinson)
 
 JRobinson$QuestAuthor <- "J Robinson"
-JRobinson$Coauthor <- gsub(";*J Robinson[[:blank:]]*;*", "", JRobinson$Coauthor)
-JRobinson_new <- JRobinson[,c(4, 5, 7, 1, 2, 3)]
-JRobinson_new <- arrange(JRobinson_new, as.numeric(AuthorID), as.numeric(PaperNO))
+
+x_list <- strsplit(JRobinson$Coauthor, "; ")
+coauthor_list <- sapply(x_list, conv_initial, name = "J Robinson")
+coauthor_vec <- sapply(coauthor_list, paste, collapse = '; ')
+JRobinson$Coauthor <- coauthor_vec
+# JRobinson$Coauthor <- gsub(";*J Robinson[[:blank:]]*;*", "", JRobinson$Coauthor)
+JRobinson  <- JRobinson[,c(4, 5, 7, 1, 2, 3)]
+JRobinson  <- arrange(JRobinson , as.numeric(AuthorID), as.numeric(PaperNO))
 
 # 927 for JSmith
 a <- readLines("../data/nameset/JSmith.txt", encoding = "latin1")
@@ -179,9 +246,14 @@ JSmith$Paper <- gsub("<","",JSmith$Paper)
 JSmith$PaperID <- rownames(JSmith)
 
 JSmith$QuestAuthor <- "J Smith"
-JSmith$Coauthor <- gsub(";*J Smith[[:blank:]]*;*", "", JSmith$Coauthor)
-JSmith_new <- JSmith[,c(4, 5, 7, 1, 2, 3)]
-JSmith_new <- arrange(JSmith_new, as.numeric(AuthorID), as.numeric(PaperNO))
+
+x_list <- strsplit(JSmith$Coauthor, "; ")
+coauthor_list <- sapply(x_list, conv_initial, name = "J Smith")
+coauthor_vec <- sapply(coauthor_list, paste, collapse = '; ')
+JSmith$Coauthor <- coauthor_vec
+# JSmith$Coauthor <- gsub(";*J Smith[[:blank:]]*;*", "", JSmith$Coauthor)
+JSmith  <- JSmith[,c(4, 5, 7, 1, 2, 3)]
+JSmith  <- arrange(JSmith , as.numeric(AuthorID), as.numeric(PaperNO))
 
 # 280 lines for KTanaka
 a <- readLines("../data/nameset/KTanaka.txt", encoding = "latin1")
@@ -201,9 +273,16 @@ KTanaka$Paper <- gsub("<","",KTanaka$Paper)
 KTanaka$PaperID <- rownames(KTanaka)
 
 KTanaka$QuestAuthor <- "K Tanaka"
-KTanaka$Coauthor <- gsub(";*K Tanaka[[:blank:]]*;*", "", KTanaka$Coauthor)
-KTanaka_new <- KTanaka[,c(4, 5, 7, 1, 2, 3)]
-KTanaka_new <- arrange(KTanaka_new, as.numeric(AuthorID), as.numeric(PaperNO))
+
+x_list <- strsplit(KTanaka$Coauthor, "; ")
+coauthor_list <- sapply(x_list, conv_initial, name = "K Tanaka")
+coauthor_vec <- sapply(coauthor_list, paste, collapse = '; ')
+KTanaka$Coauthor <- coauthor_vec
+# KTanaka$Coauthor <- gsub(";*K Tanaka[[:blank:]]*;*", "", KTanaka$Coauthor)
+KTanaka  <- KTanaka[,c(4, 5, 7, 1, 2, 3)]
+KTanaka  <- arrange(KTanaka , as.numeric(AuthorID), as.numeric(PaperNO))
+
+
 # 153 lines for MBrown
 a <- readLines("../data/nameset/MBrown.txt", encoding = "latin1")
 a <- gsub("<[/|[:alpha:]]+>", "", a)
@@ -222,9 +301,15 @@ MBrown$Paper <- gsub("<","",MBrown$Paper)
 MBrown$PaperID <- rownames(MBrown)
 
 MBrown$QuestAuthor <- "M Brown"
-MBrown$Coauthor <- gsub(";*M Brown[[:blank:]]*;*", "", MBrown$Coauthor)
-MBrown_new <- MBrown[,c(4, 5, 7, 1, 2, 3)]
-MBrown_new <- arrange(MBrown_new, as.numeric(AuthorID), as.numeric(PaperNO))
+
+x_list <- strsplit(MBrown$Coauthor, "; ")
+coauthor_list <- sapply(x_list, conv_initial, name = "M Brown")
+coauthor_vec <- sapply(coauthor_list, paste, collapse = '; ')
+MBrown$Coauthor <- coauthor_vec
+
+# MBrown$Coauthor <- gsub(";*M Brown[[:blank:]]*;*", "", MBrown$Coauthor)
+MBrown  <- MBrown[,c(4, 5, 7, 1, 2, 3)]
+MBrown  <- arrange(MBrown , as.numeric(AuthorID), as.numeric(PaperNO))
 
 #  260 lines for MJones
 a <- readLines("../data/nameset/MJones.txt", encoding = "latin1")
@@ -244,9 +329,14 @@ MJones$Paper <- gsub("<","",MJones$Paper)
 MJones$PaperID <- rownames(MJones)
 
 MJones$QuestAuthor <- "M Jones"
-MJones$Coauthor <- gsub(";*M Jones[[:blank:]]*;*", "", MJones$Coauthor)
-MJones_new <- MJones[,c(4, 5, 7, 1, 2, 3)]
-MJones_new <- arrange(MJones_new, as.numeric(AuthorID), as.numeric(PaperNO))
+
+x_list <- strsplit(MJones$Coauthor, "; ")
+coauthor_list <- sapply(x_list, conv_initial, name = "M Jones")
+coauthor_vec <- sapply(coauthor_list, paste, collapse = '; ')
+MJones$Coauthor <- coauthor_vec
+# MJones$Coauthor <- gsub(";*M Jones[[:blank:]]*;*", "", MJones$Coauthor)
+MJones  <- MJones[,c(4, 5, 7, 1, 2, 3)]
+MJones  <- arrange(MJones , as.numeric(AuthorID), as.numeric(PaperNO))
 
 # MMiller 412 lines
 a <- readLines("../data/nameset/MMiller.txt", encoding = "latin1")
@@ -266,9 +356,14 @@ MMiller$Paper <- gsub("<","",MMiller$Paper)
 MMiller$PaperID <- rownames(MMiller)
 
 MMiller$QuestAuthor <- "M Miller"
-MMiller$Coauthor <- gsub(";*M Miller[[:blank:]]*;*", "", MMiller$Coauthor)
-MMiller_new <- MMiller[,c(4, 5, 7, 1, 2, 3)]
-MMiller_new <- arrange(MMiller_new, as.numeric(AuthorID), as.numeric(PaperNO))
+
+x_list <- strsplit(MMiller$Coauthor, "; ")
+coauthor_list <- sapply(x_list, conv_initial, name = "M Miller")
+coauthor_vec <- sapply(coauthor_list, paste, collapse = '; ')
+MMiller$Coauthor <- coauthor_vec
+# MMiller$Coauthor <- gsub(";*M Miller[[:blank:]]*;*", "", MMiller$Coauthor)
+MMiller  <- MMiller[,c(4, 5, 7, 1, 2, 3)]
+MMiller  <- arrange(MMiller , as.numeric(AuthorID), as.numeric(PaperNO))
 
 # SLee 1464
 
@@ -289,10 +384,15 @@ SLee$Paper <- gsub("<","",SLee$Paper)
 SLee$PaperID <- rownames(SLee)
 
 SLee$QuestAuthor <- "S Lee"
-SLee$Coauthor <- gsub(";*S Lee[[:blank:]]*;*", "", SLee$Coauthor)
-SLee_new <- SLee[,c(4, 5, 7, 1, 2, 3)]
 
-SLee_new <- arrange(SLee_new, as.numeric(AuthorID), as.numeric(PaperNO))
+x_list <- strsplit(SLee$Coauthor, "; ")
+coauthor_list <- sapply(x_list, conv_initial, name = "S Lee")
+coauthor_vec <- sapply(coauthor_list, paste, collapse = '; ')
+SLee$Coauthor <- coauthor_vec
+# SLee$Coauthor <- gsub(";*S Lee[[:blank:]]*;*", "", SLee$Coauthor)
+SLee  <- SLee[,c(4, 5, 7, 1, 2, 3)]
+
+SLee  <- arrange(SLee , as.numeric(AuthorID), as.numeric(PaperNO))
 
 #YChen 1265
 a <- readLines("../data/nameset/YChen.txt", encoding = "latin1")
@@ -312,22 +412,27 @@ YChen$Paper <- gsub("<","",YChen$Paper)
 YChen$PaperID <- rownames(YChen)
 
 YChen$QuestAuthor <- "Y Chen"
-YChen$Coauthor <- gsub(";*Y Chen[[:blank:]]*;*", "", YChen$Coauthor)
-YChen_new <- YChen[,c(4, 5, 7, 1, 2, 3)]
-YChen_new <- arrange(YChen_new, as.numeric(AuthorID), as.numeric(PaperNO))
+
+x_list <- strsplit(YChen$Coauthor, "; ")
+coauthor_list <- sapply(x_list, conv_initial, name = "Y Chen")
+coauthor_vec <- sapply(coauthor_list, paste, collapse = '; ')
+YChen$Coauthor <- coauthor_vec
+# YChen$Coauthor <- gsub(";*Y Chen[[:blank:]]*;*", "", YChen$Coauthor)
+YChen  <- YChen[,c(4, 5, 7, 1, 2, 3)]
+YChen  <- arrange(YChen , as.numeric(AuthorID), as.numeric(PaperNO))
 
 
-write.csv(AGupta_new, file = "../output/Agupta.csv")
-write.csv(AKumar_new, file = "../output/AKumar.csv")
-write.csv(CChen_new, file = "../output/CChen.csv")
-write.csv(DJohnson_new, file = "../output/DJohnson.csv")
-write.csv(JLee_new, file = "../output/JLee.csv")
-write.csv(JMartin_new, file = "../output/JMartin.csv")
-write.csv(JRobinson_new, file = "../output/JRobinson.csv")
-write.csv(JSmith_new, file = "../output/JSmith.csv")
-write.csv(KTanaka_new, file = "../output/KTanaka.csv")
-write.csv(MBrown_new, file = "../output/MBrown.csv")
-write.csv(MJones_new, file = "../output/MJones.csv")
-write.csv(MMiller_new, file = "../output/MMiller.csv")
-write.csv(SLee_new, file = "../output/SLee.csv")
-write.csv(YChen_new, file = "../output/YChen.csv")
+write.csv(AGupta , file = "../output/Agupta.csv")
+write.csv(AKumar , file = "../output/AKumar.csv")
+write.csv(CChen , file = "../output/CChen.csv")
+write.csv(DJohnson , file = "../output/DJohnson.csv")
+write.csv(JLee , file = "../output/JLee.csv")
+write.csv(JMartin , file = "../output/JMartin.csv")
+write.csv(JRobinson , file = "../output/JRobinson.csv")
+write.csv(JSmith , file = "../output/JSmith.csv")
+write.csv(KTanaka , file = "../output/KTanaka.csv")
+write.csv(MBrown , file = "../output/MBrown.csv")
+write.csv(MJones , file = "../output/MJones.csv")
+write.csv(MMiller , file = "../output/MMiller.csv")
+write.csv(SLee , file = "../output/SLee.csv")
+write.csv(YChen , file = "../output/YChen.csv")
