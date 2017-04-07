@@ -1,14 +1,11 @@
 # reads in text file given file path
 readTextFile <- function(filePath){
-  library(readr)
   text <- read_csv(filePath)
   return(text)
 }
 
 # create tibble from data frame
 createDocumentTermMatrix <- function(text){
-  library(tidytext)
-  library(tm)
   docs <- as.vector(text$Paper)
   source <- VectorSource(docs)
   stop_words = stopwords(kind = "en")
@@ -21,15 +18,12 @@ createDocumentTermMatrix <- function(text){
 
 # citation matrix using the method described in paper #3
 createCitationMatrix <- function(text){
-  library(tidytext)
-  library(tibble)
-  library(readr)
-  tb<- createCitationMatrix(text)
+  tb<- as_tibble(text)
   tb <- tb %>%
-    mutate(coauthor = str_replace_all(coauthor, " ", "")) %>%
-    mutate(coauthor = str_replace_all(coauthor, ";", " ")) %>%
-    mutate(journal = str_replace_all(journal, " ", "")) %>%
-    mutate(term_col = paste(coauthor, journal, paper))
+    mutate(x = str_replace_all(Coauthor, " ", "")) %>%
+    mutate(x = str_replace_all(Coauthor, ";", " ")) %>%
+    mutate(y = str_replace_all(Journal, " ", "")) %>%
+    mutate(term_col = paste(x, y, Paper))
   docs <- as.vector(tb$term_col)
   source <- VectorSource(docs)
   stop_words = stopwords(kind = "en")
