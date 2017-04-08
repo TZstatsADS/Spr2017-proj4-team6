@@ -1,8 +1,10 @@
-##########################################################
-######## Function to apply Spectral clustering on  #######
-######## cosine similarities matrix/ Gram matrix   #######
-##########################################################
+###########################################################
+######## Functions to apply Spectral clustering on  #######
+######## Gaussian affinity matrix matrix using      #######
+######## k-means clustering algorithm               #######
+###########################################################
 
+## Inspired from http://www.di.fc.ul.pt/~jpn/r/spectralclustering/spectralclustering.html
 simFunction <- function(x1, x2, alpha=1) {
   exp(- alpha * norm(as.matrix(x1-x2), type="F"))
 }
@@ -57,6 +59,11 @@ specClusteringKM <- function(data, k, plotGraph=F) {
   return (km$cluster)
 }
 
+###########################################################
+######## Functions to apply Spectral clustering on  #######
+######## cosine similarities matrix/ Gram matrix    #######
+######## using QR decomposition with pivoting       #######
+###########################################################
 
 specClusteringQR <- function(x, k) {
   # x: matrix ->  matrix of cosine similarities/ Gram matrix
