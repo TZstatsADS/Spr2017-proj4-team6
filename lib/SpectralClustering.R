@@ -7,24 +7,19 @@ simFunction <- function(x1, x2, alpha=1) {
   exp(- alpha * norm(as.matrix(x1-x2), type="F"))
 }
 
-
-
-similarity <- function(my.data, similarity) {
-  N <- nrow(my.data)
+# similarity matrix created from a similarity kernel
+similarity <- function(data, similarity) {
+  N <- nrow(data)
   S <- matrix(rep(NA,N^2), ncol=N)
   for(i in 1:N) {
     for(j in 1:N) {
-      S[i,j] <- similarity(my.data[i,], my.data[j,])
+      S[i,j] <- similarity(data[i,], data[j,])
     }
   }
   return(S)
 }
 
-# matrix power operator: computes M^power (M must be diagonalizable)
-"%^%" <- function(M, power){
-  return (with(eigen(M), vectors %*% (values^power * solve(vectors))))
-}
-  
+# affinity matrix (create an undirected graph from a similarity matrix S)
 affinity <- function(S, n.neighboors=2) {
   N <- length(S[,1])
   

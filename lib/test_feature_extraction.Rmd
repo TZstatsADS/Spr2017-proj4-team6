@@ -1,6 +1,8 @@
 ---
 title: "Script to test feature extraction"
-output: html_notebook
+output:
+  pdf_document: default
+  html_notebook: default
 ---
 
 ### Step 0: Setup project directory and dependencies
@@ -59,7 +61,14 @@ time_sclust <- end.time - start.time
 
 ```
 
-### Step 2.2: Run equivalent of teacher's clustering algorithm with k-means
+### Step 2.2: Run equivalent spectral clustering using a Gaussian-similarity-kernel and k-means clustering.
+Here are the details of the implementation:
+
+First, we compute the simmilarity between citations from the TF-IDF or NTF matrix of citations. We use a Gaussian kernel as a measure of similarity. Then, we create an undirected graph based on the similarities to extract some manifold in the data, we thereby obtain $A$, the affinity matrix. After, we calculate the degree matrix $D$ (diagonal) where each diagonal value is the degree of the respective vertex (*e.g.* sum of rows).
+We compute the unnormalized graph Laplacian: $$U=D-A$$
+Then, assuming that we want $k$ clusters, we find the $k$ smallest eigenvectors of $U$. This represents the points in a new $k$-dimensional space with low-variance.
+Finally, in this transformed space, it becomes easy for a standard k-means clustering to find the appropriate clusters.
+
 ```{r, include=FALSE}
 source(file.path(projDir,"lib","SpectralClustering.R"))
 start.time <- Sys.time()
@@ -70,12 +79,24 @@ time_sKMclust <- end.time - start.time
 ```
 
 ### Step 3: Run our spectral clustering algorithm in `lib/SpectralClustering.R`
+Here are the details of the implementation:
+
+From the TF-IDF or NTF matrix of citations, we compute the cosine similarity between each citation vectors as follows:
+$$
+similarity = cos(\theta) = \frac{a \cdot b}{\begin{Vmatrix}a\end{Vmatrix} \begin{Vmatrix}b\end{Vmatrix}} = \frac{\sum_{i=1}^n a_i b_i}{\sqrt{\sum_{i=1}^n a_i^2} \sqrt{\sum_{i=1}^n b_i^2}}
+$$
+This matrix is called the **Gram matrix** $A$. In the first step of the algorithm, we determine the $k$ largest eigenvectors of $A$: $X_k$, a $n$-by-$k$ matrix. Each row of $X_k$ corresponds to a citation vector.
+Then, we compute the **QR decomposition with column pivoting** applied to ${X_k}^T$, *e.g.* we find the matrices $P$ (permutation matrix, $n$-by-$n$), $Q$ (orthogonal, $k$-by-$k$) and R (left-upper-triangular, $k$-by-$n$), so that:
+$${X_k}^T P = QR = Q[R_{11}, R_{12}]$$
+$R_{11}$ will be the $k$-by-$k$ upper-triangular matrix. We then compute the matrix $\hat{R}$:
+$$\hat{R}=R_{11}^{-1}RP^T=R_{11}^{-1}[R_{11},R_{12}]P^T = [I_k,R_{11}^{-1}R_{12}]P^T$$
+Finally, the cluster membership of each citation vector is determined by the row index of the largest element in absolute value of the corresponding column of $\hat{R}$.
 ```{r include=FALSE}
 start.time <- Sys.time()
 docsdissim <- cosSparse(t(as.matrix(dtm_train_tfidf)))
 ## apply K-WAY SPECTRAL CLUSTERING
 k <- length(unique(authorId))
-result_sQRclust <- specClustering(as.matrix(docsdissim), k)
+result_sQRclust <- specClusteringQR(as.matrix(docsdissim), k)
 end.time <- Sys.time()
 time_sQRclust <- end.time - start.time
 ```
@@ -102,7 +123,7 @@ compare_df <- data.frame(method=c("Teacher","QR Spec.C", "Kmeans Spec.C"),
 kable(compare_df,caption="Comparision of performance for two clustering methods",digits = 2)
 ```
 
-```{r}
+```{r, eval=FALSE, include=FALSE}
 files <- list.files(file.path(projDir,"output"), pattern = "*.csv")
 
 n <- length(files)
@@ -120,15 +141,14 @@ for(i in 1:n){
 
 ```
 
-```{r}
+```{r, eval=FALSE, include=FALSE}
 df <- tibble(x = 1:3, y = 3:1)
 dim(df)
 df[3,1]="1231"
 
 ```
 
-
-```{r}
+```{r, eval=FALSE, include=FALSE}
 
 data.frame([], row.names = c("Precision", "Recall", "Accuracy"))
 r <- 3
@@ -138,77 +158,5 @@ insertRow <- function(existingDF, newrow, r) {
   existingDF[r,] <- newrow
   existingDF
 }
-
-```
-
-
-SCRATCH WORK
------------------------------------------------------------------------------------------------------------------------
-### Step 3: Cosine similarity
-$$
-similarity = cos(\theta) = \frac{A \cdot B}{\begin{Vmatrix}A\end{Vmatrix} \begin{Vmatrix}B\end{Vmatrix}} = \frac{\sum_{i=1}^n A_i B_i}{\sqrt{\sum_{i=1}^n A_i^2} \sqrt{\sum_{i=1}^n B_i^2}}
-$$
-```{r}
-
-```
-
-
-```{r}
-library(stringr)
-tb<- createCitationMatrix(text)
-term <- tb %>%
-  mutate(coauthor = str_replace_all(coauthor, " ", "")) %>%
-  mutate(coauthor = str_replace_all(coauthor, ";", " ")) %>%
-  mutate(journal = str_replace_all(journal, " ", "")) %>%
-  mutate(term_col = paste(coauthor, journal, paper))
-
-docs <- as.vector(term$term_col)
-# journal <- tb %>%
-#   transmute(journal = str_replace_all(journal, " ", ""))
-# 
-# combined <- paste(coauthors,journal,tb$paper)
-
-```
-
-
-```{r}
-
-tb_author <- AKumar %>%
-  tbl_df() %>%
-  select(PaperID, AuthorID, Coauthor) %>%
-  unnest_tokens(Author, Coauthor, token = stringr::str_split, pattern = '[;,]')
-
-tb_title <- AKumar %>%
-  tbl_df() %>%
-  select(PaperID, AuthorID, Paper) %>%
-  unnest_tokens(Words, Paper, token = "words", to_lower = TRUE, drop = TRUE)
-  
-tb_publication <- AKumar %>%
-  tbl_df() %>%
-  select(PaperID, AuthorID, Journal)
-
-```
-
-
-```{r}
-test_case <- str_trim(unlist(str_split(authors[5],'[;,]')), side=c("both"))
-
-x <- c()
-for(i in 1:length(authors)){
-  x <- append(x,str_split(authors[i],'[;,]'))
-}
-citationVocab <- unlist(x)
-citationVocab <- str_trim(citationVocab, side=c("both"))
-citationVocab <- unique(citationVocab)
-```
-
-
-```{r}
-library(tidytext)
-library(tibble)
-titles <- as_tibble(AKumar$Paper, AKumar$PaperID)
-paper_words <- titles %>%
-  unnest_tokens(word,value) %>%
-  count()
 
 ```
