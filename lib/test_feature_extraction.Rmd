@@ -48,18 +48,29 @@ dtm <- createCitationMatrix(text)
 dtm_train_tfidf <- weightTfIdf(dtm,normalize = FALSE)
 ```
 
-### Step 2: Run teacher's clustering algorithm from `kernlab` package
+### Step 2.1: Run teacher's clustering algorithm from `kernlab` package
 ```{r, include=FALSE}
 start.time <- Sys.time()
 result_sclust <- specc(as.matrix(dtm_train_tfidf), 
                        centers=length(unique(authorId)))
 end.time <- Sys.time()
 time_sclust <- end.time - start.time
+
+
+```
+
+### Step 2.2: Run equivalent of teacher's clustering algorithm with k-means
+```{r, include=FALSE}
+source(file.path(projDir,"lib","SpectralClustering.R"))
+start.time <- Sys.time()
+result_sKMclust <- specClusteringKM(as.matrix(dtm_train_tfidf), 
+                       k=length(unique(authorId)))
+end.time <- Sys.time()
+time_sKMclust <- end.time - start.time
 ```
 
 ### Step 3: Run our spectral clustering algorithm in `lib/SpectralClustering.R`
 ```{r include=FALSE}
-source(file.path(projDir,"lib","SpectralClustering.R"))
 start.time <- Sys.time()
 docsdissim <- cosSparse(t(as.matrix(dtm_train_tfidf)))
 ## apply K-WAY SPECTRAL CLUSTERING
@@ -74,18 +85,20 @@ time_sQRclust <- end.time - start.time
 source(file.path(projDir,"lib",'evaluation_measures.R'))
 matching_matrix_sclust <- matching_matrix(authorId,result_sclust)
 matching_matrix_sQRclust <- matching_matrix(authorId, result_sQRclust)
+matching_matrix_sKMclust <- matching_matrix(authorId, result_sKMclust)
 performance_sclust <- performance_statistics(matching_matrix_sclust)
 performance_sQRclust <- performance_statistics(matching_matrix_sQRclust)
+performance_sKMclust <- performance_statistics(matching_matrix_sKMclust)
 ```
 
 ```{r}
-compare_df <- data.frame(method=c("Teacher","Group_6"),
-                         precision=c(performance_sclust$precision, performance_sQRclust$precision),
-                         recall=c(performance_sclust$recall, performance_sQRclust$recall),
-                         f1=c(performance_sclust$f1, performance_sQRclust$f1),
-                         accuracy=c(performance_sclust$accuracy, performance_sQRclust$accuracy),
-                         mcc=c(performance_sclust$mcc, performance_sQRclust$mcc),
-                         time=c(time_sclust,time_sQRclust))
+compare_df <- data.frame(method=c("Teacher","QR Spec.C", "Kmeans Spec.C"),
+                         precision=c(performance_sclust$precision, performance_sQRclust$precision, performance_sKMclust$precision),
+                         recall=c(performance_sclust$recall, performance_sQRclust$recall, performance_sKMclust$recall),
+                         f1=c(performance_sclust$f1, performance_sQRclust$f1, performance_sKMclust$f1),
+                         accuracy=c(performance_sclust$accuracy, performance_sQRclust$accuracy, performance_sKMclust$accuracy),
+                         mcc=c(performance_sclust$mcc, performance_sQRclust$mcc, performance_sKMclust$mcc),
+                         time=c(time_sclust, time_sQRclust, time_sKMclust))
 kable(compare_df,caption="Comparision of performance for two clustering methods",digits = 2)
 ```
 
