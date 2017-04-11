@@ -27,12 +27,12 @@ c_2(6,10,AGupta)
 #---
 union_author <- function(df) {
   #return(unique(unlist(strsplit(df$Coauthor, split = ";"))))
-  return(unique(unlist(strsplit(as.character(AGupta$Coauthor), split = ";"))))
+  return(unique(unlist(strsplit(as.character(df$Coauthor), split = ";"))))
 }
 
 # Take AGupta for example, get union of unique values of authors.
 #uni <- unique(unlist(strsplit(AGupta$Coauthor, split = ";")))
-unique(unlist(strsplit(as.character(AGupta$Coauthor), split = ";")))
+uni<-unique(unlist(strsplit(as.character(AGupta$Coauthor), split = ";")))
 # Matrix Mp
 M_p <- diag(1, nrow = nrow(df))
 
