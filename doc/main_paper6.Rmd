@@ -1,0 +1,221 @@
+---
+title: "Project 4 - Example Main Script"
+author: "Jing Wu, Tian Zheng"
+date: "3/22/2017"
+output: pdf_document
+---
+
+### Step 0: Setup Knitr root directory
+Make sure that this chunk outputs the project folder **not** the full path to the `doc` folder.
+```{r "setup", include=TRUE}
+require("knitr")
+opts_knit$set(root.dir = normalizePath(".."))
+projDir <- opts_knit$get("root.dir")
+projDir
+```
+
+
+This file is currently a template for implementing one of the suggested papers, Han, Zha, & Giles (2005). Due to the nature of the method, we only implement the method on a subset of the data, "AKumar.txt". In your project, you need to work on the whole dataset. You should follow the same structure as in this tutorial, but update it according to the papers you are assigned.
+
+## Step 0: Load the packages, specify directories
+
+```{r}
+if (!require("pacman")) install.packages("pacman")
+pacman::p_load(text2vec, dplyr, qlcMatrix, kernlab, knitr)
+
+#setwd("~/Dropbox/Project4_WhoIsWho/doc")
+# here replace it with your own path or manually set it in RStudio
+# to where this rmd file is located
+```
+
+## Step 1: Load and process the data
+
+For each record in the dataset, there are some information we want to extract and store them in a regular form: canonical author id, coauthors, paper title, publication venue title. You may need to find regular matched in the input string vectors by using regex in R. Here is a tutorial for regular expression in R, which might help you <https://rstudio-pubs-static.s3.amazonaws.com/74603_76cd14d5983f47408fdf0b323550b846.html>
+
+```{r}
+AKumar <- read.csv("../output/AKumar.csv")
+AGupta <- read.csv("../output/Agupta.csv")
+CChen <- read.csv("../output/CChen.csv")
+DJohnson <- read.csv("../output/DJohnson.csv")
+JLee <- read.csv("../output/JLee.csv")
+JMartin <- read.csv("../output/JMartin.csv")
+JRobinson <- read.csv("../output/JRobinson.csv")
+JSmith <- read.csv("../output/JSmith.csv")
+KTanaka <- read.csv("../output/KTanaka.csv")
+YChen <- read.csv("../output/YChen.csv")
+SLee <- read.csv(".../output/SLee.csv")
+MMiller <- read.csv("../output/MMiller.csv")
+MJones <- read.csv("../output/MJones.csv")
+MBrown <- read.csv("../output/MBrown.csv")
+```
+
+## Step 2: Feature design
+
+(Same as paper 3)
+
+Following the section 3.1 in the paper 3, we want to use paper titles to design features for citations. As the notation used in the paper, we want to find a $m$-dimensional citation vector $\alpha_i$ for each citation $i$, $i=1,...,n$. In this dataset, $n=$ `r nrow(AKumar)`. We study "TF-IDF" (term frequency-inverse document frequency) as suggested in the paper.
+
+TF-IDF is a numerical statistics that is intended to reflect how important a word is to a document in a collection or corpus. It is often used as a weighting factor in information retrieval, text mining, and user modeling. The TF-IDF value increases proportionally to the number of times a word appears in the document, but is offset by the frequency of the word in the corpus, which helps to adjust for the fact that some words appear more frequently in general.
+
+$$
+\begin{aligned}
+\mbox{TF}(t) &=\frac{\mbox{Number of times term $t$ appears in a document}}{\mbox{Total number of terms in the document}}\\
+\mbox{IDF}(t) &=\log{\frac{\mbox{Total number of documents}}{\mbox{Number of documents with term $t$ in it}}}\\
+\mbox{TF-IDF}(t) &=\mbox{TF}(t)\times\mbox{IDF}(t)
+\end{aligned}
+$$
+
+To compute TF-IDF, we first need to construct a document-term matrix (DTM). In other words, the first step is to vectorize text by creating a map from words to a vector space. There are some good packages you could use for text mining (probably you have tried during first project, you don't need to follow my code if you are familiar with other package), e.g. *text2vec, tm, tidytext*. Here, we are going to use *text2vec* package. A good tutorial can be found here, <https://cran.r-project.org/web/packages/text2vec/vignettes/text-vectorization.html>.
+
+Let???s first create a vocabulary-based DTM. Here we collect unique terms from all documents and mark each of them with a unique ID using the  `create_vocabulary()` function. We use an iterator to create the vocabulary.
+```{r}
+# Write a function to calcuate the DTM for paper
+dtm_paper <- function(df) {
+  it_train <- itoken(as.character(df$Paper), 
+                     preprocessor = tolower, 
+                     tokenizer = word_tokenizer,
+                     ids = nrow(df),
+                     # turn off progressbar because it won't look nice in rmd
+                     progressbar = FALSE)
+  vocab <- create_vocabulary(it_train, stopwords = c("a", "an", "the", "in", "on",
+                                                   "at", "of", "above", "under"))
+  # Now that we have a vocabulary list, we can construct a document-term matrix.
+  vectorizer <- vocab_vectorizer(vocab)
+  dtm_train <- create_dtm(it_train, vectorizer)
+  
+  return(dtm_train)
+}
+
+# Write a function to calcuate the DTM for coauthor
+dtm_coauthor <- function(df) {
+  it_train <- itoken(as.character(df$Coauthor), 
+                     preprocessor = tolower, 
+                     tokenizer = word_tokenizer,
+                     ids = nrow(df),
+                     # turn off progressbar because it won't look nice in rmd
+                     progressbar = FALSE)
+  vocab <- create_vocabulary(it_train)
+  # Now that we have a vocabulary list, we can construct a document-term matrix.
+  vectorizer <- vocab_vectorizer(vocab)
+  dtm_train <- create_dtm(it_train, vectorizer)
+  
+  return(dtm_train)
+}
+
+# Write a function to calcuate the DTM for Journal
+dtm_journal <- function(df) {
+  it_train <- itoken(as.character(df$Journal), 
+                     preprocessor = tolower, 
+                     tokenizer = word_tokenizer,
+                     ids = nrow(df),
+                     # turn off progressbar because it won't look nice in rmd
+                     progressbar = FALSE)
+  vocab <- create_vocabulary(it_train)
+  # Now that we have a vocabulary list, we can construct a document-term matrix.
+  vectorizer <- vocab_vectorizer(vocab)
+  dtm_train <- create_dtm(it_train, vectorizer)
+  
+  return(dtm_train)
+}
+
+```
+
+
+Then, we want to use DTM to compute TF-IDF transformation on DTM.
+```{r}
+dtm_paper_tfidf <- function(df) {
+  tfidf <- TfIdf$new()
+  return(fit_transform(dtm_paper(df), tfidf))
+}
+
+dtm_coauthor_tfidf <- function(df) {
+  tfidf <- TfIdf$new()
+  return(fit_transform(dtm_coauthor(df), tfidf))
+}
+
+dtm_journal_tfidf <- function(df) {
+  tfidf <- TfIdf$new()
+  return(fit_transform(dtm_journal(df), tfidf))
+}
+
+# We want to combine the three citations together
+dtm_tfidf <- function(df) {
+  total <- cbind(dtm_paper_tfidf(df), dtm_coauthor_tfidf(df), dtm_journal_tfidf(df))
+  return(total)
+}
+
+# pap <- dtm_paper_tfidf(AGupta)
+# coa <- dtm_coauthor_tfidf(AGupta)
+# jor <- dtm_journal_tfidf(AGupta)
+
+## compute cosine similarities matrix (Gram Matrix)
+docsdissim <- function(df) {
+  cosSparse(t(dtm_tfidf(df)))
+}
+
+
+```
+
+## Step 3: Clustering
+
+Following suggestion in the paper 6, we carry out hierarchical clustering method under the cosine distance as the baseline method. The number of clsters is assumed known as stated in the paper.
+
+```{r}
+basemodel <- function(df) {
+  cossim <- docsdissim(df)
+  rownames(cossim) <- c(1:nrow(dtm_tfidf(df)))
+  colnames(cossim) <- c(1:nrow(dtm_tfidf(df)))
+
+  h <- hclust(as.dist(cossim), method = "ward.D")
+  result_hclust <- cutree(h,length(unique(df$AuthorID)))
+  return(result_hclust)
+}
+
+basemodel_AGupta <- basemodel(AGupta)
+basemodel_AKumar <- basemodel(AKumar)
+# start.time <- Sys.time()
+# cossim <- docsdissim(AGupta)
+# rownames(cossim) <- c(1:nrow(dtm_tfidf(AGupta)))
+# colnames(cossim) <- c(1:nrow(dtm_tfidf(AGupta)))
+#compute pairwise cosine similarities using cosSparse function in package qlcMatrix
+# h <- hclust(as.dist(cossim), method = "ward.D")
+# result_hclust <- cutree(h,length(unique(AGupta$AuthorID)))
+# end.time <- Sys.time()
+# time_hclust <- end.time - start.time
+# table(result_hclust)
+```
+
+## Step 4: Evaluation
+
+To evaluate the performance of the method, it is required to calculate the degree of agreement between a set of system-output partitions and a set of true partitions. In general, the agreement between two partitioins is measured for a pair of entities within partitions. The basic unit for which pair-wise agreement is assessed is a pair of entities (authors in our case) which belongs to one of the four cells in the following table (Kang et at.(2009)):
+
+\includegraphics[width=500pt]{matching_matrix.png}
+
+Let $M$ be the set of machine-generated clusters, and $G$ the set of gold standard clusters. Then. in the table, for example, $a$ is the number of pairs of entities that are assigned to the same cluster in each of $M$ and $G$. Hence, $a$ and $d$ are interpreted as agreements, and $b$ and $c$ disagreements. When the table is considered as a confusion matrix for a two-class prediction problem, the standard "Precision", "Recall","F1", and "Accuracy" are defined as follows.
+
+$$
+\begin{aligned}
+\mbox{Precision} &=\frac{a}{a+b}\\
+\mbox{Recall}&=\frac{a}{a+c}\\
+\mbox{F1} &=\frac{2\times\mbox{Precision}\times\mbox{Recall}}{\mbox{Precision}+\mbox{Recall}}\\
+\mbox{Accuracy}&=\frac{a+d}{a+b+c+d}
+\end{aligned}
+$$
+
+```{r}
+source('../lib/evaluation_measures.R')
+matching_matrix_hclust_AGupta <- matching_matrix(AGupta$AuthorID,basemodel_AGupta)
+performance_hclust_AGupta <- performance_statistics(matching_matrix_hclust_AGupta)
+
+matching_matrix_hclust_AKumar <- matching_matrix(AKumar$AuthorID,basemodel_AKumar)
+performance_hclust_AKumar <- performance_statistics(matching_matrix_hclust_AKumar)
+
+compare_df <- data.frame(author=c("AGupta","AKumar"),
+                         precision=c(performance_hclust_AGupta$precision, performance_hclust_AKumar$precision),
+                         recall=c(performance_hclust_AGupta$recall, performance_hclust_AKumar$recall),
+                         f1=c(performance_hclust_AGupta$f1, performance_hclust_AKumar$f1),
+                         accuracy=c(performance_hclust_AGupta$accuracy, performance_hclust_AKumar$accuracy))
+
+kable(compare_df,caption="Comparision of performance for two clustering methods",digits = 2)
+```
+
