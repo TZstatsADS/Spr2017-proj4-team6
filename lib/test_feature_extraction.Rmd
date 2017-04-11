@@ -123,40 +123,102 @@ compare_df <- data.frame(method=c("Teacher","QR Spec.C", "Kmeans Spec.C"),
 kable(compare_df,caption="Comparision of performance for two clustering methods",digits = 2)
 ```
 
+
+```{r}
+file1 <- file.path("output/AKumar.csv")
+file2 <- file.path("output/MBrown.csv")
+df1 <- runAuthorStudy(file1)
+df2 <- runAuthorStudy(file2)
+
+```
+```{r}
+author_name <- substring(file1, 1, nchar(files)-4)
+author_name
+```
+
+### Run Spectral Clustering with QR Decomposition on all **`output`** files
 ```{r, eval=FALSE, include=FALSE}
 files <- list.files(file.path(projDir,"output"), pattern = "*.csv")
-
+filePaths <- file.path(projDir,"output",files)
+```
+```{r, include=FALSE}
 n <- length(files)
-df<-tibble()
-  
-  #row.names = c("Precision", "Recall", "Accuracy")) # x='string',y=1:10,z='string'
+tb_qr <- tibble(
+     study = rep("author_name",n),
+     method = rep("study_name",n),
+     precision = rep(0,n),
+     recall = rep(0,n),
+     f1 = rep(0,n),
+     accuracy = rep(0,n),
+     mcc = rep(0,n),
+     time = rep(0,n)
+  )
 
-
-for(i in 1:n){
-  x <- runAuthorStudyDummy(files[i])
-  print(paste(x[1], x[2], x[3]))
-  add_row(df, accuracy=x[1], precision=x[2], recall=x[3])
+for(i in 1:length(filePaths)){
+  x <- runStudy(filePaths[i], "runSpectralClusteringQR")
+  tb[i,] <- x
 }
-
-
 ```
 
-```{r, eval=FALSE, include=FALSE}
-df <- tibble(x = 1:3, y = 3:1)
-dim(df)
-df[3,1]="1231"
+### Run Teacher's K-Means on all **`output`** files
+```{r}
+n <- length(files)
+tb_teacher <- tibble(
+     study = rep("author_name",n),
+     method = rep("study_name",n),
+     precision = rep(0,n),
+     recall = rep(0,n),
+     f1 = rep(0,n),
+     accuracy = rep(0,n),
+     mcc = rep(0,n),
+     time = rep(0,n)
+  )
 
-```
-
-```{r, eval=FALSE, include=FALSE}
-
-data.frame([], row.names = c("Precision", "Recall", "Accuracy"))
-r <- 3
-newrow <- seq(4)
-insertRow <- function(existingDF, newrow, r) {
-  existingDF[seq(r+1,nrow(existingDF)+1),] <- existingDF[seq(r,nrow(existingDF)),]
-  existingDF[r,] <- newrow
-  existingDF
+for(i in 1:length(filePaths)){
+  x <- runStudy(filePaths[i], "runTeacherClusteringMethod")
+  tb_teacher[i,] <- x
 }
+```
+
+### Run K-Means with Spectral Clustering on all **`output`** files
+```{r}
+n <- length(files)
+tb_spec_km <- tibble(
+     study = rep("author_name",n),
+     method = rep("study_name",n),
+     precision = rep(0,n),
+     recall = rep(0,n),
+     f1 = rep(0,n),
+     accuracy = rep(0,n),
+     mcc = rep(0,n),
+     time = rep(0,n)
+  )
+
+for(i in 1:length(filePaths)){
+  x <- runStudy(filePaths[i], "runSpectralClusteringKMeans")
+  tb_spec_km[i,] <- x
+}
+```
+
+
+### Plot accuracy by method
+```{r}
+
+tb %>% 
+  transform(accuracy  = as.numeric(accuracy)) %>%
+  arrange(desc(accuracy)) %>%
+  ggplot(aes(x=accuracy, y=study)) + 
+  geom_point() + 
+  theme_bw() + 
+  xlab('Classification Accuracy') +
+  ylab('Study')
 
 ```
+
+
+SCRATCH WORK
+-----------------------------------------------------------------------------------------------------------------------
+### Step 3: Cosine similarity
+$$
+similarity = cos(\theta) = \frac{A \cdot B}{\begin{Vmatrix}A\end{Vmatrix} \begin{Vmatrix}B\end{Vmatrix}} = \frac{\sum_{i=1}^n A_i B_i}{\sqrt{\sum_{i=1}^n A_i^2} \sqrt{\sum_{i=1}^n B_i^2}}
+$$
