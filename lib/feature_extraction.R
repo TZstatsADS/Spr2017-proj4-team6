@@ -21,7 +21,7 @@ createCitationMatrix <- function(text){
   tb<- as_tibble(text)
   tb <- tb %>%
     mutate(x = str_replace_all(Coauthor, " ", "")) %>%
-    mutate(x = str_replace_all(Coauthor, ";", " ")) %>%
+    mutate(x = str_replace_all(x, ";", " ")) %>%
     mutate(y = str_replace_all(Journal, " ", "")) %>%
     mutate(term_col = paste(x, y, Paper))
   docs <- as.vector(tb$term_col)

@@ -1,19 +1,152 @@
 ---
-title: "Project 4 - Example Main Script"
-author: "Jing Wu, Tian Zheng"
-date: "3/22/2017"
+title: "Project 4 - Group 6"
+author: "Zeyu Gan, Virgile Mison, Galen Simmons, Siyuan Yao, Qingyuan Zhang"
+date: "4/14/2017"
 output: pdf_document
 ---
 
-### Step 0: Setup Knitr root directory
-Make sure that this chunk outputs the project folder **not** the full path to the `doc` folder.
-```{r "setup", include=TRUE}
-require("knitr")
+### Setup: assign Knitr root directory and load dependencies
+We set the `knitr` root.dir to the project directory and load/install the necessary packages to run our `main.Rmd` script.
+```{r "setup", include=FALSE}
+packages.used=c("knitr", "tidyr", "tidytext",
+                "kernlab", "dplyr", "readr",
+                "tm", "tibble", "stringr", "qlcMatrix")
+
+# check packages that need to be installed.
+packages.needed=setdiff(packages.used, 
+                        intersect(installed.packages()[,1], 
+                                  packages.used))
+# install additional packages
+if(length(packages.needed)>0){
+  install.packages(packages.needed, dependencies = TRUE)
+}
+
+library(knitr)
+library(tidyr)
+library(tidytext)
+library(kernlab)
+library(dplyr)
+library(readr)
+library(tm)
+library(tibble)
+library(stringr)
+library(qlcMatrix)
+
 opts_knit$set(root.dir = normalizePath(".."))
 projDir <- opts_knit$get("root.dir")
 projDir
 ```
 
+# Section I: Paper 3
+
+### "Name Disambiguation in Author Citations using a K-way Spectral Clustering Method"
+
+As discussed in `Section 3.1`, authors Han, Zha, and Giles use **three** citation attributes to design features for name disambiguation.  Those attributes are:
+\begin{itemize}
+\item co-author names
+\item paper titles
+\item publication venue titles
+\end{itemize}
+
+Together these attributes are called a ``citation vector.''  For a dataset with $m$ features, each citation is representated as an $m$-dimensional vector given by $M=(\alpha_1, \ldots, \alpha_m)$, where $\alpha_i$ is the weight assigned to feature $i$.  Two types of feature weights assignments are profiled: (i) TFIDF and (ii) normalized TF ("NTF").
+
+We demonstrate how we create the citation vector from our clean data sources in the `output` library in the chunks below:
+
+### Step 1: Load text file
+```{r}
+source(file.path(projDir,"lib","feature_extraction.R"))
+exFile <- file.path(projDir,"output","Agupta.csv")
+exText <- readTextFile(exFile)
+exText %>%
+  tbl_df() %>%
+  select(QuestAuthor, Coauthor, Paper, Journal) %>%
+  head()
+```
+
+### Step 2: Prep the co-author and journal terms to be included in the document term matrix
+We want the individual co-author names and journal names to be considered as single "terms" in our corpus.  Therefore, we collapse the spaces separating the unique letters in someone's name, so that it appears to be a term.  For example, "C L Zhang" would become "clzhang".  Likewise, with journal names, we combine them into a single string without spaces so that each journal is a unique term in our Document Term Matrix.
+```{r}
+as_tibble(exText) %>%
+    mutate(x = str_replace_all(Coauthor, " ", "")) %>%
+    mutate(x = str_replace_all(x, ";", " ")) %>%
+    mutate(y = str_replace_all(Journal, " ", "")) %>%
+    mutate(term_col = tolower(paste(x, y, Paper))) %>%
+    select(term_col) %>%
+    head()
+```
+### Step 3: Run our spectral clustering method on the example dataset
+We use the `tm` package to construct citation vectors in the manner described above.  We then use the `matching_matrix` and `performance_statistics` functions in the `lib/evaluation_metrics.R` file to benchmark our results. 
+```{r}
+source(file.path(projDir,"lib","SpectralClustering.R"))
+source(file.path(projDir,"lib","evaluation_measures.R"))
+
+num_authors <- length(unique(exText$AuthorID))
+author_id <- exText$AuthorID
+exDTM <- createCitationMatrix(exText)
+
+exTFIDF <- weightTfIdf(exDTM, normalize = FALSE)
+exNTF <- weightTf(exDTM)
+
+exResultsTFIDF <- runSpectralClusteringQR(exTFIDF, num_authors)
+exResultsNTF <- runSpectralClusteringQR(exNTF, num_authors)
+
+m0 <- matching_matrix(author_id,exResultsTFIDF)
+m1 <- matching_matrix(author_id,exResultsNTF)
+
+p0 <- performance_statistics(m0)
+p1 <- performance_statistics(m1)
+```
+
+### Step 4: View results
+We examine some results from our sample methods to confirm our methodology
+```{r}
+ex_df <- data.frame(
+    study=rep("Agupta", 2),
+    method=c("QR Spectral Clustering - TFIDF", "QR Spectral Clustering - NTF"),
+    precision=c(p0$precision, p1$precision),
+    recall=c(p0$recall, p1$recall),
+    f1=c(p0$f1, p1$f1),
+    accuracy=c(p0$accuracy, p1$accuracy),
+    mcc=c(p0$mcc, p1$mcc)
+    )
+
+kable(ex_df)
+```
+
+
+Term Frequency Reverse Document Frequency (TF-IDF)
+Why TF-IDF? Term frequency counts the number of times a word from a corpus apprears in a particular document.  Some words appear frequently in all documents (i.e. they are common locally).  Other words appear rarely in the corpus (i.e. they are rare globally).  Inverse document frequency weights words that appear rarely more heavily by applying the following transformation to the term frequency (tf) vector:
+
+$$ log \cdot \frac{\# of docs}{1 + \# of docs using word} $$
+
+### Distance metrics
+Scaled Euclidean Distance:
+$$d(x_i,x_q) = \sqrt{a_1(x_i[1]-x_q[1])^2 + \ldots + a_d(x_i[d]-x_q[d])^2} $$
+Cosine Similarity:
+$$ \frac{x_i^Tx_q}{\begin{Vmatrix} x_i \end{Vmatrix} \begin{Vmatrix} x_q \end{Vmatrix}  } = cos(\theta)  $$
+
+Normalizing - normalizing can make dissimilar objects appear more similar.  For example a short tweet might appear more similar to a long document.
+
+### Complexity of brute-force search
+Given a query point, $O(N)$ distance computations per 1-NN query.  By extension, $O(N \log k)$ distance computations per $k$-NN query.
+
+### K-means algorithm
+\begin{enumerate}
+\item Initialize cluster centers
+\item Assign observations to closest cluster center
+\item Revise cluster centers as mean of assigned observations
+\item Repeat steps 1 \& 2 until convergence
+\end{enumerate}
+
+### Failure modes of k-means
+\begin{itemize}
+\item disparate cluster sizes
+\item overlapping clusters
+\item different shaped / oriented clusters
+\end{itemize}
+
+BELOW IS OLD CODE FROM TEACHER
+------------
 
 This file is currently a template for implementing one of the suggested papers, Han, Zha, & Giles (2005). Due to the nature of the method, we only implement the method on a subset of the data, "AKumar.txt". In your project, you need to work on the whole dataset. You should follow the same structure as in this tutorial, but update it according to the papers you are assigned.
 
@@ -127,7 +260,7 @@ source("lib/SpectralClustering.R")
 docsdissim <- cosSparse(t(dtm_train_tfidf))
 ## apply K-WAY SPECTRAL CLUSTERING
 k <- length(unique(AKumar$AuthorID))
-result_sQRclust <- specClustering(as.matrix(docsdissim), k)
+result_sQRclust <- specClusteringQR(as.matrix(docsdissim), k)
 ```
 
 
