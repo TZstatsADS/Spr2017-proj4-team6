@@ -7,10 +7,11 @@ output: pdf_document
 
 ### Setup: assign Knitr root directory and load dependencies
 We set the `knitr` root.dir to the project directory and load/install the necessary packages to run our `main.Rmd` script.
-```{r "setup", include=FALSE}
+```{r "setup", include=TRUE, echo=FALSE}
 packages.used=c("knitr", "tidyr", "tidytext",
                 "kernlab", "dplyr", "readr",
-                "tm", "tibble", "stringr", "qlcMatrix")
+                "tm", "tibble", "stringr", "qlcMatrix",
+                "text2vec")
 
 # check packages that need to be installed.
 packages.needed=setdiff(packages.used, 
@@ -31,10 +32,10 @@ library(tm)
 library(tibble)
 library(stringr)
 library(qlcMatrix)
+library(text2vec)
 
 opts_knit$set(root.dir = normalizePath(".."))
 projDir <- opts_knit$get("root.dir")
-projDir
 ```
 
 # Section I: Paper 3
@@ -53,7 +54,7 @@ Together these attributes are called a ``citation vector.''  For a dataset with 
 We demonstrate how we create the citation vector from our clean data sources in the `output` library in the chunks below:
 
 ### Step 1: Load text file
-```{r}
+```{r, message=FALSE, warning=FALSE}
 source(file.path(projDir,"lib","feature_extraction.R"))
 exFile <- file.path(projDir,"output","Agupta.csv")
 exText <- readTextFile(exFile)
@@ -75,10 +76,32 @@ as_tibble(exText) %>%
     head()
 ```
 ### Step 3: Run our spectral clustering method on the example dataset
-We use the `tm` package to construct citation vectors in the manner described above.  We then use the `matching_matrix` and `performance_statistics` functions in the `lib/evaluation_metrics.R` file to benchmark our results. 
+We use the `tm` package to construct citation vectors in the manner described above.  We then use the `matching_matrix` and `performance_statistics` functions in the `lib/evaluation_metrics.R` file to benchmark our results.
+
+#### Details of Gaussian-similarity-kernel and k-means clustering implementation
+First, we compute the simmilarity between citations from the TF-IDF or NTF matrix of citations. We use a Gaussian kernel as a measure of similarity. Then, we create an undirected graph based on the similarities to extract some manifold in the data, we thereby obtain $A$, the affinity matrix. After, we calculate the degree matrix $D$ (diagonal) where each diagonal value is the degree of the respective vertex (*e.g.* sum of rows).
+We compute the unnormalized graph Laplacian: $$U=D-A$$
+Then, assuming that we want $k$ clusters, we find the $k$ smallest eigenvectors of $U$. This represents the points in a new $k$-dimensional space with low-variance.
+Finally, in this transformed space, it becomes easy for a standard k-means clustering to find the appropriate clusters.
+
+#### Details of spectral clustering algorithm
+From the TF-IDF or NTF matrix of citations, we compute the cosine similarity between each citation vectors as follows:
+$$
+similarity = cos(\theta) = \frac{a \cdot b}{\begin{Vmatrix}a\end{Vmatrix} \begin{Vmatrix}b\end{Vmatrix}} = \frac{\sum_{i=1}^n a_i b_i}{\sqrt{\sum_{i=1}^n a_i^2} \sqrt{\sum_{i=1}^n b_i^2}}
+$$
+This matrix is called the **Gram matrix** $A$. In the first step of the algorithm, we determine the $k$ largest eigenvectors of $A$: $X_k$, a $n$-by-$k$ matrix. Each row of $X_k$ corresponds to a citation vector.
+Then, we compute the **QR decomposition with column pivoting** applied to ${X_k}^T$, *e.g.* we find the matrices $P$ (permutation matrix, $n$-by-$n$), $Q$ (orthogonal, $k$-by-$k$) and R (left-upper-triangular, $k$-by-$n$), so that:
+$${X_k}^T P = QR = Q[R_{11}, R_{12}]$$
+
+$R_{11}$ will be the $k$-by-$k$ upper-triangular matrix. We then compute the matrix $\hat{R}$:
+$$\hat{R}=R_{11}^{-1}RP^T=R_{11}^{-1}[R_{11},R_{12}]P^T = [I_k,R_{11}^{-1}R_{12}]P^T$$
+Finally, the cluster membership of each citation vector is determined by the row index of the largest element in absolute value of the corresponding column of $\hat{R}$.
 ```{r}
 source(file.path(projDir,"lib","SpectralClustering.R"))
 source(file.path(projDir,"lib","evaluation_measures.R"))
+
+# start counter - estimated time 5 sec
+start.time <- Sys.time()
 
 num_authors <- length(unique(exText$AuthorID))
 author_id <- exText$AuthorID
@@ -95,14 +118,20 @@ m1 <- matching_matrix(author_id,exResultsNTF)
 
 p0 <- performance_statistics(m0)
 p1 <- performance_statistics(m1)
+
+# end counter
+end.time <- Sys.time()
+study.time <- end.time - start.time
+kable(data.frame(study_time = study.time))
 ```
 
-### Step 4: View results
+### Step 4: View results from sample study
 We examine some results from our sample methods to confirm our methodology
 ```{r}
 ex_df <- data.frame(
     study=rep("Agupta", 2),
-    method=c("QR Spectral Clustering - TFIDF", "QR Spectral Clustering - NTF"),
+    method=c("QR Spectral Clustering - TFIDF",
+             "QR Spectral Clustering - NTF"),
     precision=c(p0$precision, p1$precision),
     recall=c(p0$recall, p1$recall),
     f1=c(p0$f1, p1$f1),
@@ -113,24 +142,65 @@ ex_df <- data.frame(
 kable(ex_df)
 ```
 
+### Step 5: Load results from all studies
+```{r}
+load(file.path(projDir,"output/processed_data/prelimResults.RData"))
+library(ggplot2)
+tb %>% 
+  transform(accuracy  = as.numeric(accuracy)) %>%
+  arrange(desc(accuracy)) %>%
+  ggplot(aes(x=accuracy, y=study)) + 
+  geom_point() + 
+  theme_bw() + 
+  xlab('Classification Accuracy') +
+  ylab('Study')
 
+tb_teacher%>% 
+  transform(accuracy  = as.numeric(accuracy)) %>%
+  arrange(desc(accuracy)) %>%
+  ggplot(aes(x=accuracy, y=study)) + 
+  geom_point() + 
+  theme_bw() + 
+  xlab('Classification Accuracy') +
+  ylab('Study')
+# needs implementation
+```
+
+Alternate implementation of the plot
+```{r}
+fj <- full_join(tb,tb_teacher) %>%
+  mutate(accuracy = as.numeric(accuracy))
+
+```
+plot
+```{r}
+ggplot(data=fj, aes(x=study, y=accuracy, fill=method)) + 
+    geom_bar(colour="black", stat="identity",
+             position=position_dodge(),
+             size=.3) +                        # Thinner lines
+    scale_fill_hue(name="Method") +      # Set legend title
+    xlab("Author Study") + ylab("Accuracy") + # Set axis labels
+    ggtitle("Classification Accuracy By Method") +     # Set title
+    theme_bw()
+```
+
+
+#### Supplemental notes on Paper #3
 Term Frequency Reverse Document Frequency (TF-IDF)
 Why TF-IDF? Term frequency counts the number of times a word from a corpus apprears in a particular document.  Some words appear frequently in all documents (i.e. they are common locally).  Other words appear rarely in the corpus (i.e. they are rare globally).  Inverse document frequency weights words that appear rarely more heavily by applying the following transformation to the term frequency (tf) vector:
 
 $$ log \cdot \frac{\# of docs}{1 + \# of docs using word} $$
 
-### Distance metrics
+#### Distance metrics
 Scaled Euclidean Distance:
 $$d(x_i,x_q) = \sqrt{a_1(x_i[1]-x_q[1])^2 + \ldots + a_d(x_i[d]-x_q[d])^2} $$
 Cosine Similarity:
 $$ \frac{x_i^Tx_q}{\begin{Vmatrix} x_i \end{Vmatrix} \begin{Vmatrix} x_q \end{Vmatrix}  } = cos(\theta)  $$
 
-Normalizing - normalizing can make dissimilar objects appear more similar.  For example a short tweet might appear more similar to a long document.
-
-### Complexity of brute-force search
+#### Complexity of brute-force search
 Given a query point, $O(N)$ distance computations per 1-NN query.  By extension, $O(N \log k)$ distance computations per $k$-NN query.
 
-### K-means algorithm
+#### K-means algorithm
 \begin{enumerate}
 \item Initialize cluster centers
 \item Assign observations to closest cluster center
@@ -145,173 +215,160 @@ Given a query point, $O(N)$ distance computations per 1-NN query.  By extension,
 \item different shaped / oriented clusters
 \end{itemize}
 
-BELOW IS OLD CODE FROM TEACHER
-------------
+----------------------------------------------------------------------------------
+# Section II: Paper 6
 
-This file is currently a template for implementing one of the suggested papers, Han, Zha, & Giles (2005). Due to the nature of the method, we only implement the method on a subset of the data, "AKumar.txt". In your project, you need to work on the whole dataset. You should follow the same structure as in this tutorial, but update it according to the papers you are assigned.
-
-## Step 0: Load the packages, specify directories
-
-```{r}
-if (!require("pacman")) install.packages("pacman")
-pacman::p_load(text2vec, dplyr, qlcMatrix, kernlab, knitr)
-
-#setwd("~/Dropbox/Project4_WhoIsWho/doc")
-# here replace it with your own path or manually set it in RStudio
-# to where this rmd file is located
-```
+### "A Constraint-Based Probabilistic Framework for Name Disambiguation"
 
 ## Step 1: Load and process the data
-
-For each record in the dataset, there are some information we want to extract and store them in a regular form: canonical author id, coauthors, paper title, publication venue title. You may need to find regular matched in the input string vectors by using regex in R. Here is a tutorial for regular expression in R, which might help you <https://rstudio-pubs-static.s3.amazonaws.com/74603_76cd14d5983f47408fdf0b323550b846.html>
-
 ```{r}
-AKumar <- data.frame(
-      scan(
-      file.path(projDir,"data","nameset","AKumar.txt", fsep = .Platform$file.sep),
-      what = list(Coauthor = "", Paper = "", Journal = ""),
-      sep=">",
-      quiet=TRUE),
-    stringsAsFactors=FALSE)
-# This need to be modified for different name set
-
-# extract canonical author id befor "_"
-AKumar$AuthorID <- sub("_.*","",AKumar$Coauthor)
-# extract paper number under same author between "_" and first whitespace
-AKumar$PaperNO <- sub(".*_(\\w*)\\s.*", "\\1", AKumar$Coauthor)
-# delete "<" in AKumar$Coauthor, you may need to further process the coauthor
-# term depending on the method you are using
-AKumar$Coauthor <- gsub("<","",sub("^.*?\\s","", AKumar$Coauthor))
-# delete "<" in AKumar$Paper
-AKumar$Paper <- gsub("<","",AKumar$Paper)
-# add PaperID for furthur use, you may want to combine all the nameset files and 
-# then assign the unique ID for all the citations
-AKumar$PaperID <- rownames(AKumar)
+AKumar <- read.csv(file.path(projDir,"output","AKumar.csv"))
+AGupta <- read.csv(file.path(projDir,"output","Agupta.csv"))
+CChen <- read.csv(file.path(projDir,"output","CChen.csv"))
+DJohnson <- read.csv(file.path(projDir,"output","DJohnson.csv"))
+JLee <- read.csv(file.path(projDir,"output","JLee.csv"))
+JMartin <- read.csv(file.path(projDir,"output","JMartin.csv"))
+JRobinson <- read.csv(file.path(projDir,"output","JRobinson.csv"))
+JSmith <- read.csv(file.path(projDir,"output","JSmith.csv"))
+KTanaka <- read.csv(file.path(projDir,"output","KTanaka.csv"))
+YChen <- read.csv(file.path(projDir,"output","YChen.csv"))
+SLee <- read.csv(file.path(projDir,"output","SLee.csv"))
+MMiller <- read.csv(file.path(projDir,"output","MMiller.csv"))
+MJones <- read.csv(file.path(projDir,"output","MJones.csv"))
+MBrown <- read.csv(file.path(projDir,"output","MBrown.csv"))
 ```
 
-## Step 2: Feature design
 
-Following the section 3.1 in the paper, we want to use paper titles to design features for citations. As the notation used in the paper, we want to find a $m$-dimensional citation vector $\alpha_i$ for each citation $i$, $i=1,...,n$. In this dataset, $n=$ `r nrow(AKumar)`. We study "TF-IDF" (term frequency-inverse document frequency) as suggested in the paper.
 
-TF-IDF is a numerical statistics that is intended to reflect how important a word is to a document in a collection or corpus. It is often used as a weighting factor in information retrieval, text mining, and user modeling. The TF-IDF value increases proportionally to the number of times a word appears in the document, but is offset by the frequency of the word in the corpus, which helps to adjust for the fact that some words appear more frequently in general.
-
-$$
-\begin{aligned}
-\mbox{TF}(t) &=\frac{\mbox{Number of times term $t$ appears in a document}}{\mbox{Total number of terms in the document}}\\
-\mbox{IDF}(t) &=\log{\frac{\mbox{Total number of documents}}{\mbox{Number of documents with term $t$ in it}}}\\
-\mbox{TF-IDF}(t) &=\mbox{TF}(t)\times\mbox{IDF}(t)
-\end{aligned}
-$$
-
-To compute TF-IDF, we first need to construct a document-term matrix (DTM). In other words, the first step is to vectorize text by creating a map from words to a vector space. There are some good packages you could use for text mining (probably you have tried during first project, you don't need to follow my code if you are familiar with other package), e.g. *text2vec, tm, tidytext*. Here, we are going to use *text2vec* package. A good tutorial can be found here, <https://cran.r-project.org/web/packages/text2vec/vignettes/text-vectorization.html>.
-
-Let???s first create a vocabulary-based DTM. Here we collect unique terms from all documents and mark each of them with a unique ID using the  `create_vocabulary()` function. We use an iterator to create the vocabulary.
 ```{r}
-it_train <- itoken(AKumar$Paper, 
-             preprocessor = tolower, 
-             tokenizer = word_tokenizer,
-             ids = AKumar$PaperID,
-             # turn off progressbar because it won't look nice in rmd
-             progressbar = FALSE)
-vocab <- create_vocabulary(it_train, stopwords = c("a", "an", "the", "in", "on",
-                                                   "at", "of", "above", "under"))
+# Write a function to calcuate the DTM for paper
+dtm_paper <- function(df) {
+  it_train <- itoken(as.character(df$Paper), 
+                     preprocessor = tolower, 
+                     tokenizer = word_tokenizer,
+                     ids = nrow(df),
+                     # turn off progressbar because it won't look nice in rmd
+                     progressbar = FALSE)
+  vocab <- create_vocabulary(it_train, stopwords = c("a", "an", "the", "in","on","at", "of", "above", "under"))
+  # Now that we have a vocabulary list, we can construct a document-term matrix.
+  vectorizer <- vocab_vectorizer(vocab)
+  dtm_train <- create_dtm(it_train, vectorizer)
+  
+  return(dtm_train)
+}
 
-vocab
+# Write a function to calcuate the DTM for coauthor
+dtm_coauthor <- function(df) {
+  it_train <- itoken(as.character(df$Coauthor), 
+                     preprocessor = tolower, 
+                     tokenizer = word_tokenizer,
+                     ids = nrow(df),
+                     # turn off progressbar because it won't look nice in rmd
+                     progressbar = FALSE)
+  vocab <- create_vocabulary(it_train)
+  # Now that we have a vocabulary list, we can construct a document-term matrix.
+  vectorizer <- vocab_vectorizer(vocab)
+  dtm_train <- create_dtm(it_train, vectorizer)
+  
+  return(dtm_train)
+}
+
+# Write a function to calcuate the DTM for Journal
+dtm_journal <- function(df) {
+  it_train <- itoken(as.character(df$Journal), 
+                     preprocessor = tolower, 
+                     tokenizer = word_tokenizer,
+                     ids = nrow(df),
+                     # turn off progressbar because it won't look nice in rmd
+                     progressbar = FALSE)
+  vocab <- create_vocabulary(it_train)
+  # Now that we have a vocabulary list, we can construct a document-term matrix.
+  vectorizer <- vocab_vectorizer(vocab)
+  dtm_train <- create_dtm(it_train, vectorizer)
+  
+  return(dtm_train)
+}
+
 ```
 
-Here, we remove pre-defined stopwords, the words like ???a???, ???the???, ???in???, ???I???, ???you???, ???on???, etc, which do not provide much useful information. 
-
-Now that we have a vocabulary list, we can construct a document-term matrix.
-```{r}
-vectorizer <- vocab_vectorizer(vocab)
-dtm_train <- create_dtm(it_train, vectorizer)
-```
-
-Now we have DTM and can check its dimensions.
-```{r}
-dim(dtm_train)
-```
-
-As you can see, the DTM has `r nrow(dtm_train)` rows, equal to the number of citations, and `r ncol(dtm_train)`, equal to the number of unique terms excluding stopwords.
 
 Then, we want to use DTM to compute TF-IDF transformation on DTM.
 ```{r}
-tfidf <- TfIdf$new()
-dtm_train_tfidf <- fit_transform(dtm_train, tfidf)
+dtm_paper_tfidf <- function(df) {
+  tfidf <- TfIdf$new()
+  return(fit_transform(dtm_paper(df), tfidf))
+}
+
+dtm_coauthor_tfidf <- function(df) {
+  tfidf <- TfIdf$new()
+  return(fit_transform(dtm_coauthor(df), tfidf))
+}
+
+dtm_journal_tfidf <- function(df) {
+  tfidf <- TfIdf$new()
+  return(fit_transform(dtm_journal(df), tfidf))
+}
+
+# We want to combine the three citations together
+dtm_tfidf <- function(df) {
+  total <- cbind(dtm_paper_tfidf(df), dtm_coauthor_tfidf(df), dtm_journal_tfidf(df))
+  return(total)
+}
+
+# pap <- dtm_paper_tfidf(AGupta)
+# coa <- dtm_coauthor_tfidf(AGupta)
+# jor <- dtm_journal_tfidf(AGupta)
+
+## compute cosine similarities matrix (Gram Matrix)
+docsdissim <- function(df) {
+  cosSparse(t(dtm_tfidf(df)))
+}
+
+
 ```
 
 ## Step 3: Clustering
 
-Following suggestion in the paper, we carry out spectral clustering on the Gram matrix of the citation vectors by using R function `specc()` in *kernlab*. The number of clusters is assumed known as stated in the paper.
+Following suggestion in the paper 6, we carry out hierarchical clustering method under the cosine distance as the baseline method. The number of clsters is assumed known as stated in the paper.
 ```{r}
-start.time <- Sys.time()
-result_sclust <- specc(as.matrix(dtm_train_tfidf), 
-                       centers=length(unique(AKumar$AuthorID)))
-end.time <- Sys.time()
-time_sclust <- end.time - start.time
-result_sclust
-table(result_sclust)
-```
+basemodel <- function(df) {
+  cossim <- docsdissim(df)
+  rownames(cossim) <- c(1:nrow(dtm_tfidf(df)))
+  colnames(cossim) <- c(1:nrow(dtm_tfidf(df)))
 
-### Our K-way clustering with QR decomposition
-```{r}
-source("lib/SpectralClustering.R")
-## compute cosine similarities matrix
-docsdissim <- cosSparse(t(dtm_train_tfidf))
-## apply K-WAY SPECTRAL CLUSTERING
-k <- length(unique(AKumar$AuthorID))
-result_sQRclust <- specClusteringQR(as.matrix(docsdissim), k)
-```
+  h <- hclust(as.dist(cossim), method = "ward.D")
+  result_hclust <- cutree(h,length(unique(df$AuthorID)))
+  return(result_hclust)
+}
 
-
-We can also using hierarchical clustering method under the cosine distance. The intention of using a different clustering method is just to let you know how to compare performance between various methods. 
-```{r}
-start.time <- Sys.time()
-docsdissim <- cosSparse(t(dtm_train_tfidf))
-rownames(docsdissim) <- c(1:nrow(dtm_train_tfidf))
-colnames(docsdissim) <- c(1:nrow(dtm_train_tfidf))
+basemodel_AGupta <- basemodel(AGupta)
+basemodel_AKumar <- basemodel(AKumar)
+# start.time <- Sys.time()
+# cossim <- docsdissim(AGupta)
+# rownames(cossim) <- c(1:nrow(dtm_tfidf(AGupta)))
+# colnames(cossim) <- c(1:nrow(dtm_tfidf(AGupta)))
 #compute pairwise cosine similarities using cosSparse function in package qlcMatrix
-h <- hclust(as.dist(docsdissim), method = "ward.D")
-result_hclust <- cutree(h,length(unique(AKumar$AuthorID)))
-end.time <- Sys.time()
-time_hclust <- end.time - start.time
-table(result_hclust)
+# h <- hclust(as.dist(cossim), method = "ward.D")
+# result_hclust <- cutree(h,length(unique(AGupta$AuthorID)))
+# end.time <- Sys.time()
+# time_hclust <- end.time - start.time
+# table(result_hclust)
 ```
 
-## Step 4: Evaluation
-
-To evaluate the performance of the method, it is required to calculate the degree of agreement between a set of system-output partitions and a set of true partitions. In general, the agreement between two partitioins is measured for a pair of entities within partitions. The basic unit for which pair-wise agreement is assessed is a pair of entities (authors in our case) which belongs to one of the four cells in the following table (Kang et at.(2009)):
-
-\includegraphics[width=500pt]{matching_matrix.png}
-
-Let $M$ be the set of machine-generated clusters, and $G$ the set of gold standard clusters. Then. in the table, for example, $a$ is the number of pairs of entities that are assigned to the same cluster in each of $M$ and $G$. Hence, $a$ and $d$ are interpreted as agreements, and $b$ and $c$ disagreements. When the table is considered as a confusion matrix for a two-class prediction problem, the standard "Precision", "Recall","F1", and "Accuracy" are defined as follows.
-
-$$
-\begin{aligned}
-\mbox{Precision} &=\frac{a}{a+b}\\
-\mbox{Recall}&=\frac{a}{a+c}\\
-\mbox{F1} &=\frac{2\times\mbox{Precision}\times\mbox{Recall}}{\mbox{Precision}+\mbox{Recall}}\\
-\mbox{Accuracy}&=\frac{a+d}{a+b+c+d}
-\end{aligned}
-$$
 
 ```{r}
-source('lib/evaluation_measures.R')
-matching_matrix_hclust <- matching_matrix(AKumar$AuthorID,result_hclust)
-performance_hclust <- performance_statistics(matching_matrix_hclust)
-matching_matrix_sclust <- matching_matrix(AKumar$AuthorID,result_sclust)
-performance_sclust <- performance_statistics(matching_matrix_sclust)
-# our result (awful for now -> accuracy of 38%)
-matching_matrix_sQRclust <- matching_matrix(AKumar$AuthorID,result_sQRclust)
-performance_sQRclust <- performance_statistics(matching_matrix_sQRclust)
-performance_sQRclust
+matching_matrix_hclust_AGupta <- matching_matrix(AGupta$AuthorID,basemodel_AGupta)
+performance_hclust_AGupta <- performance_statistics(matching_matrix_hclust_AGupta)
 
-compare_df <- data.frame(method=c("sClust","hClust"),
-                         precision=c(performance_sclust$precision, performance_hclust$precision),
-                         recall=c(performance_sclust$recall, performance_hclust$recall),
-                         f1=c(performance_sclust$f1, performance_hclust$f1),
-                         accuracy=c(performance_sclust$accuracy, performance_hclust$accuracy),
-                         time=c(time_sclust,time_hclust))
+matching_matrix_hclust_AKumar <- matching_matrix(AKumar$AuthorID,basemodel_AKumar)
+performance_hclust_AKumar <- performance_statistics(matching_matrix_hclust_AKumar)
+
+compare_df <- data.frame(author=c("AGupta","AKumar"),
+                         precision=c(performance_hclust_AGupta$precision, performance_hclust_AKumar$precision),
+                         recall=c(performance_hclust_AGupta$recall, performance_hclust_AKumar$recall),
+                         f1=c(performance_hclust_AGupta$f1, performance_hclust_AKumar$f1),
+                         accuracy=c(performance_hclust_AGupta$accuracy, performance_hclust_AKumar$accuracy))
+
 kable(compare_df,caption="Comparision of performance for two clustering methods",digits = 2)
 ```
 

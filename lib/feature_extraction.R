@@ -105,7 +105,7 @@ runAuthorStudy <- function(filePath){
   m1 <- matching_matrix(author_id,r1)
   p1 <- performance_statistics(m1)
   
-  return(c(author_name, "QR Spectral Clustering", p1$precision, p1$recall, p1$f1, p1$accuracy, p1$mcc, p1$mcc, t1))
+  return(c(author_name, "QR Spectral Clustering", p1$precision, p1$recall, p1$f1, p1$accuracy, p1$mcc, p1$mcc))
 }
 
 runAuthorStudyDeprecated <- function(filePath){
