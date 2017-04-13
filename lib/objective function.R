@@ -8,11 +8,12 @@ obj_func<-function(X,Y,df){
   sum<-0
   for (i in 1:n){
     for (j in i:n){
-      if (Y[i,]!=Y[j,]){
+      if (any(Y[i,]!=Y[j,])){
         sum<-sum+dist_feature(X[i,],X[j,],A)*
-          (0.7*c_2(X[i,],X[j,],df)+c_6(x[i,],x[j,],df))
+          (0.7*c_2(i,j,df)+c_6(i,j,df))
       }
     }
     sum<-sum+dist_feature(X[i,],Y[i,],A)
   }
+  return(sum)
 }

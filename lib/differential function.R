@@ -20,4 +20,5 @@ dif_func<-function(X,Y,A,df,m){
     }
     sum<-sum+dist_feature(X[i,],Y[i,],A)  
   }
+  return(sum)
 }
