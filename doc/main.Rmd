@@ -4,14 +4,18 @@ author: "Zeyu Gan, Virgile Mison, Galen Simmons, Siyuan Yao, Qingyuan Zhang"
 date: "4/14/2017"
 output: pdf_document
 ---
-
+\begin{figure}
+\centering
+\includegraphics[width=75pt]{presentation_img/cu.png}
+\end{figure}
+\\
 ### Setup: assign Knitr root directory and load dependencies
-We set the `knitr` root.dir to the project directory and load/install the necessary packages to run our `main.Rmd` script.
-```{r "setup", include=TRUE, echo=FALSE}
+We set the `knitr` root.dir to the project directory (`projDir`) and load/install the necessary packages to run our `main.Rmd` script. [Code omitted]
+```{r "setup", include=FALSE}
 packages.used=c("knitr", "tidyr", "tidytext",
                 "kernlab", "dplyr", "readr",
                 "tm", "tibble", "stringr", "qlcMatrix",
-                "text2vec")
+                "text2vec", "ggplot2")
 
 # check packages that need to be installed.
 packages.needed=setdiff(packages.used, 
@@ -33,27 +37,33 @@ library(tibble)
 library(stringr)
 library(qlcMatrix)
 library(text2vec)
+library(ggplot2)
 
 opts_knit$set(root.dir = normalizePath(".."))
 projDir <- opts_knit$get("root.dir")
+projDir
 ```
 
-# Section I: Paper 3
+\hrulefill
+
+Section I: Paper 3
+==================
 
 ### "Name Disambiguation in Author Citations using a K-way Spectral Clustering Method"
 
-As discussed in `Section 3.1`, authors Han, Zha, and Giles use **three** citation attributes to design features for name disambiguation.  Those attributes are:
+As discussed in `Section 3.1` of the paper, authors Han, Zha, and Giles use **three** citation attributes to design features for name disambiguation.  Those attributes are:
 \begin{itemize}
 \item co-author names
 \item paper titles
 \item publication venue titles
 \end{itemize}
 
-Together these attributes are called a ``citation vector.''  For a dataset with $m$ features, each citation is representated as an $m$-dimensional vector given by $M=(\alpha_1, \ldots, \alpha_m)$, where $\alpha_i$ is the weight assigned to feature $i$.  Two types of feature weights assignments are profiled: (i) TFIDF and (ii) normalized TF ("NTF").
+Together these attributes are called a 'citation vector.'  For a dataset with $m$ features, each citation is representated as an $m$-dimensional vector given by $M=(\alpha_1, \ldots, \alpha_m)$, where $\alpha_i$ is the weight assigned to feature $i$.  Two types of feature weights assignments are profiled: (i) TFIDF and (ii) normalized TF ("NTF").
 
 We demonstrate how we create the citation vector from our clean data sources in the `output` library in the chunks below:
 
 ### Step 1: Load text file
+We parse raw data from the `data` folder into the appropriate format using the `Data_Cleaning.R` script contained in the `lib` folder.  THe parsed datasets are stored in the `output` folder.
 ```{r, message=FALSE, warning=FALSE}
 source(file.path(projDir,"lib","feature_extraction.R"))
 exFile <- file.path(projDir,"output","Agupta.csv")
@@ -61,11 +71,12 @@ exText <- readTextFile(exFile)
 exText %>%
   tbl_df() %>%
   select(QuestAuthor, Coauthor, Paper, Journal) %>%
-  head()
+  head() %>%
+  kable(format = "markdown")
 ```
 
 ### Step 2: Prep the co-author and journal terms to be included in the document term matrix
-We want the individual co-author names and journal names to be considered as single "terms" in our corpus.  Therefore, we collapse the spaces separating the unique letters in someone's name, so that it appears to be a term.  For example, "C L Zhang" would become "clzhang".  Likewise, with journal names, we combine them into a single string without spaces so that each journal is a unique term in our Document Term Matrix.
+We want the individual co-author names and journal names to be considered as single 'terms' in our corpus.  Therefore, we collapse the spaces separating the unique letters in someone's name, so that it appears to be a term.  For example, "C L Zhang" would become "clzhang".  Likewise, with journal names, we combine them into a single string without spaces so that each journal is a unique term in our Document Term Matrix.
 ```{r}
 as_tibble(exText) %>%
     mutate(x = str_replace_all(Coauthor, " ", "")) %>%
@@ -73,34 +84,47 @@ as_tibble(exText) %>%
     mutate(y = str_replace_all(Journal, " ", "")) %>%
     mutate(term_col = tolower(paste(x, y, Paper))) %>%
     select(term_col) %>%
-    head()
+    head() %>%
+    kable(format = 'markdown')
 ```
+
 ### Step 3: Run our spectral clustering method on the example dataset
-We use the `tm` package to construct citation vectors in the manner described above.  We then use the `matching_matrix` and `performance_statistics` functions in the `lib/evaluation_metrics.R` file to benchmark our results.
+We use the `tm` package to construct citation vectors in the manner described above.  We then use the `matching_matrix` and `performance_statistics` functions in the `lib/evaluation_metrics.R` file to benchmark our results.  Below we describe the details of our spectral clustering implementation.  Our spectral clustering implementation is contained in `lib/SpectralClustering.R` and includes the following key methods:
 
-#### Details of Gaussian-similarity-kernel and k-means clustering implementation
+\begin{itemize}
+\item \textbf{affinity} : creates an affinity matrix
+\item \textbf{simFunction} : similarity function 
+\item \textbf{similarity} : creates a similarity matrix from a similarity kernel
+\item \textbf{specClusteringKM} : method for assigning clusters using k-means
+\item \textbf{specClusteringQR} : method for assigning clusters based on cosine similarities using QR decomposition with pivoting 
+\end{itemize}
+
+Details of Gaussian-similarity-kernel and k-means clustering implementation
+---------------------------------------------------------------------------
 First, we compute the simmilarity between citations from the TF-IDF or NTF matrix of citations. We use a Gaussian kernel as a measure of similarity. Then, we create an undirected graph based on the similarities to extract some manifold in the data, we thereby obtain $A$, the affinity matrix. After, we calculate the degree matrix $D$ (diagonal) where each diagonal value is the degree of the respective vertex (*e.g.* sum of rows).
-We compute the unnormalized graph Laplacian: $$U=D-A$$
-Then, assuming that we want $k$ clusters, we find the $k$ smallest eigenvectors of $U$. This represents the points in a new $k$-dimensional space with low-variance.
-Finally, in this transformed space, it becomes easy for a standard k-means clustering to find the appropriate clusters.
 
-#### Details of spectral clustering algorithm
+We compute the unnormalized graph Laplacian: $U=D-A$. Then, assuming that we want $k$ clusters, we find the $k$ smallest eigenvectors of $U$. This represents the points in a new $k$-dimensional space with low-variance.  Finally, in this transformed space, it becomes easy for a standard k-means clustering to find the appropriate clusters.
+
+#### Gram Matrix
 From the TF-IDF or NTF matrix of citations, we compute the cosine similarity between each citation vectors as follows:
 $$
-similarity = cos(\theta) = \frac{a \cdot b}{\begin{Vmatrix}a\end{Vmatrix} \begin{Vmatrix}b\end{Vmatrix}} = \frac{\sum_{i=1}^n a_i b_i}{\sqrt{\sum_{i=1}^n a_i^2} \sqrt{\sum_{i=1}^n b_i^2}}
+similarity = cos(\theta) = \frac{a \cdot b}{\begin{Vmatrix}a\end{Vmatrix} \begin{Vmatrix}b\end{Vmatrix}} = \frac{\sum\limits_{i=1}^n a_i b_i}{\sqrt{\sum\limits_{i=1}^n a_i^2} \sqrt{\sum\limits_{i=1}^n b_i^2}}
 $$
 This matrix is called the **Gram matrix** $A$. In the first step of the algorithm, we determine the $k$ largest eigenvectors of $A$: $X_k$, a $n$-by-$k$ matrix. Each row of $X_k$ corresponds to a citation vector.
 Then, we compute the **QR decomposition with column pivoting** applied to ${X_k}^T$, *e.g.* we find the matrices $P$ (permutation matrix, $n$-by-$n$), $Q$ (orthogonal, $k$-by-$k$) and R (left-upper-triangular, $k$-by-$n$), so that:
 $${X_k}^T P = QR = Q[R_{11}, R_{12}]$$
-
 $R_{11}$ will be the $k$-by-$k$ upper-triangular matrix. We then compute the matrix $\hat{R}$:
 $$\hat{R}=R_{11}^{-1}RP^T=R_{11}^{-1}[R_{11},R_{12}]P^T = [I_k,R_{11}^{-1}R_{12}]P^T$$
 Finally, the cluster membership of each citation vector is determined by the row index of the largest element in absolute value of the corresponding column of $\hat{R}$.
-```{r}
+
+
+#### Example study using methods in our `lib/SpectralClustering.R` script
+For reproducability, we avoid computing k-means in this `Rmd` file because of running time.  We run this study on the Normalized Term Frequencies (NTF) and the TF-IDF objects we extract in the `lib/feature_extraction.R` script.
+```{r, message=FALSE, warning=FALSE}
 source(file.path(projDir,"lib","SpectralClustering.R"))
 source(file.path(projDir,"lib","evaluation_measures.R"))
 
-# start counter - estimated time 5 sec
+# estimated time 6 sec
 start.time <- Sys.time()
 
 num_authors <- length(unique(exText$AuthorID))
@@ -119,15 +143,15 @@ m1 <- matching_matrix(author_id,exResultsNTF)
 p0 <- performance_statistics(m0)
 p1 <- performance_statistics(m1)
 
-# end counter
 end.time <- Sys.time()
 study.time <- end.time - start.time
-kable(data.frame(study_time = study.time))
+
+kable(data.frame(study_time = study.time), format = "markdown")
 ```
 
 ### Step 4: View results from sample study
-We examine some results from our sample methods to confirm our methodology
-```{r}
+We examine some results from our sample methods to confirm our methodology is producing reasonable results.
+```{r, message=FALSE, warning=FALSE}
 ex_df <- data.frame(
     study=rep("Agupta", 2),
     method=c("QR Spectral Clustering - TFIDF",
@@ -139,13 +163,16 @@ ex_df <- data.frame(
     mcc=c(p0$mcc, p1$mcc)
     )
 
-kable(ex_df)
+kable(ex_df, format = "markdown", digits = 2)
 ```
 
+**NOTE**: Notice the f1 score. The F1 score can be interpreted as a weighted average of the precision and recall (with both weighted equally), where an F1 score reaches its best value at 1 and worst at 0.  It is given by:
+$$F_{\beta} = \frac{(1+\beta^2) \cdot \text{true positive}}{(1+\beta^2) \cdot \text{true positive} + \beta^2 \cdot \text{false negative} + \text{false positive}}$$
+
 ### Step 5: Load results from all studies
+Separately, we have run our spectral clustering methods on all of our cleaned and labeled datasets in `output` and saved the results in `output/studies`.  We plot the results of our studies below.
 ```{r}
 load(file.path(projDir,"output/processed_data/prelimResults.RData"))
-library(ggplot2)
 tb %>% 
   transform(accuracy  = as.numeric(accuracy)) %>%
   arrange(desc(accuracy)) %>%
@@ -163,14 +190,13 @@ tb_teacher%>%
   theme_bw() + 
   xlab('Classification Accuracy') +
   ylab('Study')
-# needs implementation
+# needs implementation ___ MAKE SURE THAT YOU CHART THE F1, not the accuracy!
 ```
 
 Alternate implementation of the plot
 ```{r}
 fj <- full_join(tb,tb_teacher) %>%
   mutate(accuracy = as.numeric(accuracy))
-
 ```
 plot
 ```{r}
@@ -184,23 +210,21 @@ ggplot(data=fj, aes(x=study, y=accuracy, fill=method)) +
     theme_bw()
 ```
 
+\hrulefill
 
-#### Supplemental notes on Paper #3
-Term Frequency Reverse Document Frequency (TF-IDF)
-Why TF-IDF? Term frequency counts the number of times a word from a corpus apprears in a particular document.  Some words appear frequently in all documents (i.e. they are common locally).  Other words appear rarely in the corpus (i.e. they are rare globally).  Inverse document frequency weights words that appear rarely more heavily by applying the following transformation to the term frequency (tf) vector:
+## General Notes on Spectral Clustering vs K-Means using Term Frequency:
+Why TF-IDF? Term frequency counts the number of times a word from a corpus apprears in a particular document.  Some words appear frequently in all documents (i.e. they are common locally).  Other words appear rarely in the corpus (i.e. they are rare globally).  Inverse document frequency weights words that appear rarely more heavily, implying that rare words are more important for determining the cluster assignment of a particular document than words that are common to all documents in a corpus.  Importantly, TF-IDF can be used with
 
-$$ log \cdot \frac{\# of docs}{1 + \# of docs using word} $$
+### Distance measures
 
-#### Distance metrics
-Scaled Euclidean Distance:
+#### Scaled Euclidean Distance:
 $$d(x_i,x_q) = \sqrt{a_1(x_i[1]-x_q[1])^2 + \ldots + a_d(x_i[d]-x_q[d])^2} $$
-Cosine Similarity:
+
+#### Cosine Similarity:
 $$ \frac{x_i^Tx_q}{\begin{Vmatrix} x_i \end{Vmatrix} \begin{Vmatrix} x_q \end{Vmatrix}  } = cos(\theta)  $$
 
-#### Complexity of brute-force search
-Given a query point, $O(N)$ distance computations per 1-NN query.  By extension, $O(N \log k)$ distance computations per $k$-NN query.
-
 #### K-means algorithm
+
 \begin{enumerate}
 \item Initialize cluster centers
 \item Assign observations to closest cluster center
@@ -208,17 +232,107 @@ Given a query point, $O(N)$ distance computations per 1-NN query.  By extension,
 \item Repeat steps 1 \& 2 until convergence
 \end{enumerate}
 
-### Failure modes of k-means
+#### Complexity of brute-force search
+Given a query point, $O(N)$ distance computations per 1-NN query.  By extension, $O(N \log k)$ distance computations per $k$-NN query.
+
+#### Failure modes of k-means
 \begin{itemize}
 \item disparate cluster sizes
 \item overlapping clusters
 \item different shaped / oriented clusters
 \end{itemize}
 
-----------------------------------------------------------------------------------
-# Section II: Paper 6
+\includegraphics[width=300pt]{presentation_img/failure_kmeans.png}
+
+In the most basic implementation, k-means tries to make cluster assignments of documents using euclidean distances based on distances from cluster centers:
+$$ z_i \leftarrow \arg \min \begin{Vmatrix} u_j - \textbf{x}_i \end{Vmatrix}^2_2$$
+This method is problematic because only the center of the cluster matters.  In other words, this method assumes that clusters are spherically symmetric.  Although weighted Euclidean distances could be used, we would need to know which weights were appropriate, and even with weights, the clusters would still have the same axis-aligned ellipses.
+
+In the author disambiguation problem, we are faced with a conundrum, namely that kmeans generally fails to give good results when the distance metric used produces 'overlapping' clusters.  Since authors that share names may work in related fields, this type of disambiguation problem calls for a more probabalistic approach.  This is the motivation for using 'mixture models,' which enables clustering based on **learned weightings** of features when computing cluster assignments.
+
+\hrulefill
+
+Section II: Paper 6
+===================
 
 ### "A Constraint-Based Probabilistic Framework for Name Disambiguation"
+
+In this paper, Zhang, Tang, Li, and Wang propose a mixture model using the expectations maximization algorithm to perform name disambiguation.  They propose a 'semi-supervised' framework to "combine the advantages of supervised and unsupervised methods."  What does this mean in practice?  First, we randomize the weights we assign to the constraints per `section 3.2`.  Then, we try to use EM to minimize our objective function with two weighted constraints.
+
+
+model, and then compute p(zi = k|xi, θ), which represents the posterior probability that point i belongs to cluster k. This is known as the responsibility of cluster k for point i, and can be computed using Bayes rule as follows:
+
+
+This procedure is called soft clustering, and is identical to the computations performed when using a generative classifier. The di erence between the two models only arises at training time: in the mixture case, we never observe zi, whereas with a generative classifier, we do observe yi (which plays the role of zi).
+
+EM exploits the fact that if the data were fully observed, then the ML/ MAP estimate would be easy to compute. In particular, EM is an iterative algorithm which alternates between inferring the missing values given the parameters (E step), and then optimizing the parameters given the “filled in” data (M step). We give the details below, followed by several examples. We end with a more theoretical discussion, where we put the algorithm in a larger context. See Table 11.2 for a summary of the applications of EM in this book.
+
+
+Hence in each E step, we must find the Euclidean distance between N data points and K cluster centers, which takes O(NKD) time. However, this can be sped up using various techniques, such as applying the triangle inequality to avoid some redundant computations (Elkan 2003). Given the hard cluster assignments, the M step updates each cluster center by computing the mean of all points assigned to it:
+\mu_k = \frac{1}{N_k} \sum\limits_{i:z_i=k} x_i
+
+
+Essentially, we are trying to figure out the weights to assign to the 
+
+\includegraphics[width=150pt]{presentation_img/iteration_1.png}
+\includegraphics[width=150pt]{presentation_img/iteration_2.png}
+\includegraphics[width=150pt]{presentation_img/iteration_3.png}
+
+Table 2 contstraints:
+---------------------
+$c_2$ for any two papers, if they share a co-author, $c_2$ is 1, otherwise is 0
+$c_6$ if co-authors of any two papers are are also 
+
+Minimize the objective function by using EM algorithm:
+
+Objective Function:
+$$ \max p(Y|X) \propto \min f_{obj} = \sum_i \sum_j \{D(x_i, x_j) I (l_i \neq l_j) \sum_{c_k \in C} [w_k c_k (p_i, p_j)] \} + \sum_{x_i \in X} D(x_i, y_{l_i}) + \log Z $$
+where,
+$$ D(x_i, y_{l_i}) $$ is the distance between paper $i$ and researcher $y_{l_i}$
+$w_k$ is the weight of for $c_k$
+$Z$ is the normalization factor
+
+Constraints:
+The constraint function is a Boolean-valued function and is defined as follow:
+$$ c(p_i,p_j) =
+\begin{cases}
+1, & \text{if $p_i$ and $p_j$ satisfy the constraint $c_l$} \\
+0, & \text{otherwise}
+\end{cases} $$
+
+We define six types of constraints and formalize them in the framework. We propose employing EM algorithm to learn different distance metric for different persons.
+
+The rest of the paper is organized as follows. In Section 2, we review related work. In Section 3, we formalize the disambigua- tion problem. In Section 4, we explain our approach to the prob- lem and in Section 5, we give the experimental results. We con- clude the paper in Section 6.
+
+Our method is based on a unified probabilistic model using Hid- den Markov Random Fields (HMRF). This model incorporates constraints and a parameterized-distance measure. The disam- biguation problem is cast as assigning a tag to each paper with each tag representing an actual researcher yi.
+
+a-posteriori probability as the objective function
+
+We aims at finding the maximum of the objective
+
+Six types of constraints are incorporated into the objec- tive function, where constraints are considered as a form of su- pervision. If one paper’s label assignment violates a constraint, it will be penalized in some sense, which in turn affects the result.
+
+The EM process can be summarized as follows: in the E-step, given the current researcher representatives (the set of assigned papers), every paper is re-assigned to the researcher by maximiz- ing p(Y|X). In the M-step, the researcher representative yh is re- estimated from the assignments to maximize p(Y|X) again, and the distance measure is updated to increase the objective function.
+
+
+In the E-step, assignments of data points to researchers are up- dated to maximize the $p(Y\|X)$. A greedy algorithm is used to se- quentially update the assignment of each paper
+
+Three tasks are executed by the Expectation Maximization (EM) method: learning parameters of the distance measure, re- assignment of paper to researchers, and update of researcher rep- resentatives yk.
+We define our distance function $D(x_i, x_j)$ as follows:
+
+
+$$ D(x_i,x_j) = 1-\frac{x^T_i \textbf{A} x_j}{\begin{Vmatrix} x_i \end{Vmatrix}_A \begin{Vmatrix} x_j \end{Vmatrix}_A} $$
+,  where 
+$$ \begin{Vmatrix} x_i \end{Vmatrix}_A = \sqrt{x^T_i \textbf{A}x_j} $$
+
+
+Each paper xi is assigned to yh that minimizes the function:
+$$ f(y_h,x_i)=\sum_{i} D(x_i,y_h) + \sum_{i,j \neq i} \{D(x_i,x_j) \sum_{c_k \notin C} [w_k c_k (x_i,x_j)]\} $$
+
+In the M-step, each researcher representative is updated by the arithmetic mean of its points:
+$$ y_h = \frac{\sum\limits_{i:l_i=h} x_i}{\begin{Vmatrix} \sum\limits_{i:l_i=h} x_i \end{Vmatrix}_A} $$
+
+
 
 ## Step 1: Load and process the data
 ```{r}
@@ -336,8 +450,8 @@ basemodel <- function(df) {
   rownames(cossim) <- c(1:nrow(dtm_tfidf(df)))
   colnames(cossim) <- c(1:nrow(dtm_tfidf(df)))
 
-  h <- hclust(as.dist(cossim), method = "ward.D")
-  result_hclust <- cutree(h,length(unique(df$AuthorID)))
+  h <- hclust(as.dist(cossim), method = "ward.D") # 
+  result_hclust <- cutree(h,length(unique(df$AuthorID))) # {stats} package
   return(result_hclust)
 }
 
@@ -369,6 +483,6 @@ compare_df <- data.frame(author=c("AGupta","AKumar"),
                          f1=c(performance_hclust_AGupta$f1, performance_hclust_AKumar$f1),
                          accuracy=c(performance_hclust_AGupta$accuracy, performance_hclust_AKumar$accuracy))
 
-kable(compare_df,caption="Comparision of performance for two clustering methods",digits = 2)
+kable(compare_df, format = "markdown", caption="Comparision of performance for two clustering methods",digits = 2)
 ```
 
