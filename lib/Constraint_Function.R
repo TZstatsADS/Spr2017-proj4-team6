@@ -6,8 +6,8 @@
 #---
 
 c_2 <- function(p_i, p_j, df) {
-  a <- strsplit(as.character(df$Coauthor[p_i]), " ; ")[[1]]
-  b <- strsplit(as.character(df$Coauthor[p_j]), " ; ")[[1]]
+  a <- strsplit(as.character(df$Coauthor[p_i]), "; ")[[1]]
+  b <- strsplit(as.character(df$Coauthor[p_j]), "; ")[[1]]
   return(ifelse(any(a %in% b)==T, 1, 0))
 }
 
