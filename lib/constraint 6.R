@@ -2,7 +2,7 @@
 
 c_6<-function(i,j,M){
   k<-0
-  while(M[i,j]!=1){
+  while((M[i,j]!=1)&(k<20)){
     M<-M%*%M
     k<-k+1
   }
