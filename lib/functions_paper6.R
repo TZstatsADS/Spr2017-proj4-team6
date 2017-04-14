@@ -62,7 +62,10 @@ union_author <- function(df) {
 uni <- union_author(AGupta)
 
 # Matrix Mp
-M_p <- diag(1, nrow = nrow(df))
+M_p <-function(a) { 
+  return(x = diag(1, nrow = nrow(a)))
+}
+
 
 # Matrix Mpa
 M_pa <- function(a) {
@@ -91,13 +94,14 @@ M_ap <- function(a) {
 
 ## here we also need a database (called db) that has all publication information including coauthors. 
 ## ( basically it's the rbind of all 14 datasets, with 6 columns. What we care is the coauthor column)
+
 M_a <- function(a) {
   all_author <- union_author(a)
   mat_a <- matrix(NA, nrow = length(all_author), ncol = length(all_author))
-  for (i in all_author) {
-    for (j in all_author) {
-      a_index <- grep(i, db, value = F)
-      b_index <- grep(j, db, value = F)
+  for (i in 1:length(all_author)) {
+    for (j in 1:length(all_author)) {
+      a_index <- grep(all_author[i], db, value = F)
+      b_index <- grep(all_author[j], db, value = F)
       mat_a[i, j] <- ifelse(any(a_index %in% b_index), 1, 0)
     }
   }

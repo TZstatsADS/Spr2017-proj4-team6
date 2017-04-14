@@ -43,7 +43,7 @@ JRobinson <- read.csv("../output/JRobinson.csv")
 JSmith <- read.csv("../output/JSmith.csv")
 KTanaka <- read.csv("../output/KTanaka.csv")
 YChen <- read.csv("../output/YChen.csv")
-SLee <- read.csv(".../output/SLee.csv")
+SLee <- read.csv("../output/SLee.csv")
 MMiller <- read.csv("../output/MMiller.csv")
 MJones <- read.csv("../output/MJones.csv")
 MBrown <- read.csv("../output/MBrown.csv")
@@ -173,16 +173,30 @@ basemodel <- function(df) {
 
 basemodel_AGupta <- basemodel(AGupta)
 basemodel_AKumar <- basemodel(AKumar)
-# start.time <- Sys.time()
-# cossim <- docsdissim(AGupta)
-# rownames(cossim) <- c(1:nrow(dtm_tfidf(AGupta)))
-# colnames(cossim) <- c(1:nrow(dtm_tfidf(AGupta)))
-#compute pairwise cosine similarities using cosSparse function in package qlcMatrix
-# h <- hclust(as.dist(cossim), method = "ward.D")
-# result_hclust <- cutree(h,length(unique(AGupta$AuthorID)))
-# end.time <- Sys.time()
-# time_hclust <- end.time - start.time
-# table(result_hclust)
+
+
+# EM clustering
+db <- c(as.character(AGupta$Coauthor), as.character(AKumar$Coauthor), as.character(CChen$Coauthor),
+        as.character(DJohnson$Coauthor), as.character(JLee$Coauthor), as.character(JMartin$Coauthor),
+        as.character(JRobinson$Coauthor), as.character(JSmith$Coauthor),
+        as.character(KTanaka$Coauthor), as.character(MBrown$Coauthor), as.character(MJones$Coauthor),
+        as.character(MMiller$Coauthor),as.character(SLee$Coauthor), as.character(YChen$Coauthor))
+
+source("../lib/functions_paper6.R")
+
+x_agu <- docsdissim(AGupta)
+y_ini <- sample(1:26, 577, replace = T)
+l_agu <- matrix(NA, ncol = ncol(x_agu), nrow = 26)
+for(i in unique(AGupta$AuthorID)) {
+  l_agu[i,] <- mean(x_agu[which(i==AGupta$AuthorID), ])
+}
+y_agu <- matrix(NA, ncol = ncol(x_agu), nrow = 577)
+for (i in 1:577) {
+  y_agu[i, ] <- l_agu[y_ini[i], ]
+
+}
+A <- diag(1, nrow = 577, ncol = 577)
+EM_algorithm(X = x_agu, Y = y_agu, l = l_agu, df = AGupta)
 ```
 
 ## Step 4: Evaluation
