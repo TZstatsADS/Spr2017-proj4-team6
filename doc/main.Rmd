@@ -856,3 +856,8 @@ EM_algorithmFast <- function(X, Y, l, df) {
 }
 ```
 
+\begin{figure}[h]
+\centering
+\caption{Convergence of EM algorithm: evolution of cluster responsibilities}
+\includegraphics[width=500pt]{presentation_img/em_convergence.png}
+\end{figure}
