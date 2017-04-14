@@ -30,7 +30,7 @@ pacman::p_load(text2vec, dplyr, qlcMatrix, kernlab, knitr)
 
 ## Step 1: Load and process the data
 
-For each record in the dataset, there are some information we want to extract and store them in a regular form: canonical author id, coauthors, paper title, publication venue title. You may need to find regular matched in the input string vectors by using regex in R. Here is a tutorial for regular expression in R, which might help you <https://rstudio-pubs-static.s3.amazonaws.com/74603_76cd14d5983f47408fdf0b323550b846.html>
+As liiustrated in paper 6, we clean the author names into initial first name + full last name version for model use.
 
 ```{r}
 AKumar <- read.csv("output/AKumar.csv")
@@ -53,21 +53,9 @@ MBrown <- read.csv("output/MBrown.csv")
 
 (Same as paper 3)
 
-Following the section 3.1 in the paper 3, we want to use paper titles to design features for citations. As the notation used in the paper, we want to find a $m$-dimensional citation vector $\alpha_i$ for each citation $i$, $i=1,...,n$. In this dataset, $n=$ `r nrow(AKumar)`. We study "TF-IDF" (term frequency-inverse document frequency) as suggested in the paper.
+We used paper titles, coauthor names and journals to design features for citations. We study "TF-IDF" (term frequency-inverse document frequency) as suggested in the paper.
 
-TF-IDF is a numerical statistics that is intended to reflect how important a word is to a document in a collection or corpus. It is often used as a weighting factor in information retrieval, text mining, and user modeling. The TF-IDF value increases proportionally to the number of times a word appears in the document, but is offset by the frequency of the word in the corpus, which helps to adjust for the fact that some words appear more frequently in general.
-
-$$
-\begin{aligned}
-\mbox{TF}(t) &=\frac{\mbox{Number of times term $t$ appears in a document}}{\mbox{Total number of terms in the document}}\\
-\mbox{IDF}(t) &=\log{\frac{\mbox{Total number of documents}}{\mbox{Number of documents with term $t$ in it}}}\\
-\mbox{TF-IDF}(t) &=\mbox{TF}(t)\times\mbox{IDF}(t)
-\end{aligned}
-$$
-
-To compute TF-IDF, we first need to construct a document-term matrix (DTM). In other words, the first step is to vectorize text by creating a map from words to a vector space. There are some good packages you could use for text mining (probably you have tried during first project, you don't need to follow my code if you are familiar with other package), e.g. *text2vec, tm, tidytext*. Here, we are going to use *text2vec* package. A good tutorial can be found here, <https://cran.r-project.org/web/packages/text2vec/vignettes/text-vectorization.html>.
-
-Lets first create a vocabulary-based DTM. Here we collect unique terms from all documents and mark each of them with a unique ID using the  `create_vocabulary()` function. We use an iterator to create the vocabulary.
+To compute TF-IDF, we first need to construct a document-term matrix (DTM). In other words, the first step is to vectorize text by creating a map from words to a vector space. Following codes create functions to calculate vocabulary-based DTM for three differnet citation type and combine them into one matrix. Here we collect unique terms from all documents and mark each of them with a unique ID using the  `create_vocabulary()` function. We use an iterator to create the vocabulary.
 ```{r}
 # Write a function to calcuate the DTM for paper
 dtm_paper <- function(df) {
@@ -110,7 +98,8 @@ dtm_journal <- function(df) {
                      ids = nrow(df),
                      # turn off progressbar because it won't look nice in rmd
                      progressbar = FALSE)
-  vocab <- create_vocabulary(it_train)
+  vocab <- create_vocabulary(it_train, stopwords = c("a", "an", "the", "in", "on",
+                                                   "at", "of", "above", "under"))
   # Now that we have a vocabulary list, we can construct a document-term matrix.
   vectorizer <- vocab_vectorizer(vocab)
   dtm_train <- create_dtm(it_train, vectorizer)
@@ -160,6 +149,7 @@ docsdissim <- function(df) {
 
 Following suggestion in the paper 6, we carry out hierarchical clustering method under the cosine distance as the baseline method. The number of clsters is assumed known as stated in the paper.
 
+The improved model developed in the paper is the EM algorithm applied on the objective function as defined in the paper, with two constraints coauthor and tau-coauthor. In order to implement the whole process of optimization, we wrote up the objective function and EM algorithm with E step focused on optimizing assignments for papers and M step on tuning parameters used in objective function. Due to the complexity of high-dimension matrix computation, the M step of the EM algorithm as well as the c_6 constraint are extremely time-consuming and thus we're not able to get final result for evaluation on EM algorithm.
 ```{r}
 basemodel <- function(df) {
   cossim <- docsdissim(df)
