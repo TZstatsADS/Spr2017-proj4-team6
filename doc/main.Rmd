@@ -316,7 +316,7 @@ In this paper, Zhang, Tang, Li, and Wang propose a mixture model using the expec
 \includegraphics[width=350pt]{presentation_img/em_algorithm.png}
 \end{figure}
 
-In the EM algorithm, $p(z_i = k | x_i, \theta)$ represents the posterior probability that point $i$ belongs to cluster $k$. This is known as the responsibility of cluster $k$ for point $i$, and can be computed using Bayes rule.  This procedure is called *soft clustering*.  EM is an iterative algorithm which alternates between inferring the missing values given the parameters (E step), and then optimizing the parameters given the "filled in" data (M step).  An illustration of this iterative process is shown below:
+In the EM algorithm, $p(z_i = k | x_i, \theta)$ represents the posterior probability that point $i$ belongs to cluster $k$. This is known as the responsibility of cluster $k$ for point $i$, and can be computed using Bayes rule.  This procedure is called *soft clustering*.  EM is an iterative algorithm which alternates between optimizing the objective function given the parameters (E step), and then optimizing the parameters given the "filled in" data (M step).  An illustration of this iterative process is shown below:
 
 \includegraphics[width=150pt]{presentation_img/iteration_1.png}
 \includegraphics[width=150pt]{presentation_img/iteration_2.png}
