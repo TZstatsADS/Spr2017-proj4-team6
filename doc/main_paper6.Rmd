@@ -174,18 +174,18 @@ db <- c(as.character(AGupta$Coauthor), as.character(AKumar$Coauthor), as.charact
 
 source("lib/functions_paper6.R")
 
-x_agu <- docsdissim(AGupta)
-y_ini <- sample(1:26, 577, replace = T)
-l_agu <- matrix(NA, ncol = ncol(x_agu), nrow = 26)
-for(i in unique(AGupta$AuthorID)) {
-  l_agu[i,] <- mean(x_agu[which(i==AGupta$AuthorID), ])
-}
-y_agu <- matrix(NA, ncol = ncol(x_agu), nrow = 577)
-for (i in 1:577) {
-  y_agu[i, ] <- l_agu[y_ini[i], ]
-}
-
-EM_algorithm(X = x_agu, Y = y_agu, l = l_agu, df = AGupta)
+# x_agu <- docsdissim(AGupta)
+# y_ini <- sample(1:26, 577, replace = T)
+# l_agu <- matrix(NA, ncol = ncol(x_agu), nrow = 26)
+# for(i in unique(AGupta$AuthorID)) {
+#   l_agu[i,] <- mean(x_agu[which(i==AGupta$AuthorID), ])
+# }
+# y_agu <- matrix(NA, ncol = ncol(x_agu), nrow = 577)
+# for (i in 1:577) {
+#   y_agu[i, ] <- l_agu[y_ini[i], ]
+# }
+# A <- diag(1, nrow = nrow(x_agu))
+# EM_algorithm(X = x_agu, Y = y_agu, l = l_agu, df = AGupta)
 
 ## try EM_algorithmFast on smaller dataset (JMartin) to run 3 iterations
 ## E step is still a bottleneck, but step M is now fast
@@ -200,7 +200,8 @@ y_jmt <- matrix(NA, ncol = ncol(x_jmt), nrow = length(x_jmt[1,]))
 for (i in 1:length(x_jmt[1,])) {
   y_jmt[i, ] <- l_jmt[y_ini[i], ]
 }
-
+# initial value assigned to A
+A <- diag(1, nrow = nrow(x_jmt))
 EM_algorithmFast(X = x_jmt, Y = y_jmt, l = l_jmt, df = JMartin)
 
 ```
