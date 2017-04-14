@@ -324,8 +324,10 @@ In the EM algorithm, $p(z_i = k | x_i, \theta)$ represents the posterior probabi
 
 Table 2 contstraints:
 ---------------------
-$c_2$ for any two papers, if they share a co-author, $c_2$ is 1, otherwise is 0
-$c_6$ if co-authors of any two papers are are also 
+\begin{itemize}
+\item $c_2$ for any two papers, if they share a co-author, $c_2$ is 1, otherwise is 0 
+\item $c_6$ if co-authors of any two papers are are also co-authors on another paper 
+\end{itemize}
 
 Constraints:
 The constraint function is a Boolean-valued function and is defined as follow:
@@ -337,11 +339,11 @@ $$ c(p_i,p_j) =
 
 Goal is to minimize the objective function by using EM algorithm.
 \textbf{Objective Function:}
-$$ \max p(Y|X) \propto \min f_{obj} = \sum_i \sum_j \{D(x_i, x_j) I (l_i \neq l_j) \sum_{c_k \in C} [w_k c_k (p_i, p_j)] \} + \sum_{x_i \in X} D(x_i, y_{l_i}) + \log Z $$ \\
-where, \\
-$ D(x_i, y_{l_i}) $ is the distance between paper $i$ and researcher $y_{l_i}$ \\
-$w_k$ is the weight of for $c_k$ \\
-$Z$ is the normalization factor \\
+$$ \max p(Y|X) \propto \min f_{obj} = \sum_i \sum_j \{D(x_i, x_j) I (l_i \neq l_j) \sum_{c_k \in C} [w_k c_k (p_i, p_j)] \} + \sum_{x_i \in X} D(x_i, y_{l_i}) + \log Z $$ 
+where,
+$ D(x_i, y_{l_i}) $ is the distance between paper $i$ and researcher $y_{l_i}$
+$w_k$ is the weight of for $c_k$
+$Z$ is the normalization factor
 
 ## Step 1: Load and process the data
 We assign each of the author datasets to a variable [code omitted]
