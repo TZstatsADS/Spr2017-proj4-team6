@@ -69,20 +69,33 @@ runStudy <- function(filePath, fun_name){
   num_authors <- length(unique(author_id))
   
   # run our spectral clustering method with QR decomposition
-  start.time <- Sys.time()
   f <- match.fun(fun_name)
   r1 <- f(tfidf, num_authors)
-  end.time <- Sys.time()
-  t1 <- end.time - start.time
-  start.time <- NULL
-  end.time <- NULL
   
   m1 <- matching_matrix(author_id,r1)
   p1 <- performance_statistics(m1)
   
-  return(c(author_name, fun_name, p1$precision, p1$recall, p1$f1, p1$accuracy, p1$mcc, p1$mcc, t1))
+  return(c(author_name, fun_name, p1$precision, p1$recall, p1$f1, p1$accuracy, p1$mcc, p1$mcc))
 }
 
+runStudyQR <- function(filePath){
+  text <- read_csv(filePath)
+  dtm <- createCitationMatrix(text)
+  tfidf <- weightTfIdf(dtm,normalize = FALSE)
+  
+  # we need author_id for each paper to make dis-similarity matrix
+  author_name <- text$QuestAuthor[1]
+  author_id <- text$AuthorID
+  num_authors <- length(unique(author_id))
+  
+  # run our spectral clustering method with QR decomposition
+  r1 <- specClusteringQR(tfidf, num_authors)
+  
+  m1 <- matching_matrix(author_id,r1)
+  p1 <- performance_statistics(m1)
+  
+  return(c(author_name, fun_name, p1$precision, p1$recall, p1$f1, p1$accuracy, p1$mcc, p1$mcc))
+}
 
 runAuthorStudy <- function(filePath){
   text <- read_csv(filePath)

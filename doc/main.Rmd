@@ -4,11 +4,12 @@ author: "Zeyu Gan, Virgile Mison, Galen Simmons, Siyuan Yao, Qingyuan Zhang"
 date: "4/14/2017"
 output: pdf_document
 ---
-\begin{figure}
+
+\begin{figure}[t!]
 \centering
 \includegraphics[width=75pt]{presentation_img/cu.png}
 \end{figure}
-\\
+
 ### Setup: assign Knitr root directory and load dependencies
 We set the `knitr` root.dir to the project directory (`projDir`) and load/install the necessary packages to run our `main.Rmd` script. [Code omitted]
 ```{r "setup", include=FALSE}
@@ -50,6 +51,12 @@ Section I: Paper 3
 ==================
 
 ### "Name Disambiguation in Author Citations using a K-way Spectral Clustering Method"
+
+\begin{figure}[h]
+\centering
+\caption{Visual Representation of Spectral Clustering}
+\includegraphics[width=150pt]{presentation_img/spectral_clustering.png}
+\end{figure}
 
 As discussed in `Section 3.1` of the paper, authors Han, Zha, and Giles use **three** citation attributes to design features for name disambiguation.  Those attributes are:
 \begin{itemize}
@@ -98,6 +105,12 @@ We use the `tm` package to construct citation vectors in the manner described ab
 \item \textbf{specClusteringKM} : method for assigning clusters using k-means
 \item \textbf{specClusteringQR} : method for assigning clusters based on cosine similarities using QR decomposition with pivoting 
 \end{itemize}
+
+\begin{figure}[h]
+\centering
+\caption{Graphical comparison of kmeans vs spectral clustering}
+\includegraphics[width=\textwidth]{presentation_img/kmeans_spectral.png}
+\end{figure}
 
 Details of Gaussian-similarity-kernel and k-means clustering implementation
 ---------------------------------------------------------------------------
@@ -166,56 +179,90 @@ ex_df <- data.frame(
 kable(ex_df, format = "markdown", digits = 2)
 ```
 
-**NOTE**: Notice the f1 score. The F1 score can be interpreted as a weighted average of the precision and recall (with both weighted equally), where an F1 score reaches its best value at 1 and worst at 0.  It is given by:
-$$F_{\beta} = \frac{(1+\beta^2) \cdot \text{true positive}}{(1+\beta^2) \cdot \text{true positive} + \beta^2 \cdot \text{false negative} + \text{false positive}}$$
+#### Evaluation Metrics
+\textbf{Precision:}
+$$
+P = \frac{T_p}{T_p + F_p}
+$$
+\textbf{Recall:}
+$$
+R = \frac{T_p}{T_p + F_n}
+$$
+
+\textbf{F1 Score:}
+The F1 score can be interpreted as a harmonic mean of precision and recal.  An F1 score reaches its best value at 1 and worst at 0.  It is given by:
+$$
+F1 = 2 \frac{P \times R}{P + R}
+$$
+\textbf{Matthew's Correlation Coefficient (MCC):}
+Our group implemented, which returns a value between −1 and +1. A coefficient of +1 represents a perfect prediction, 0 no better than random prediction and −1 indicates total disagreement between prediction and observation.  MCC is given by:
+$$
+MCC = \frac{T_p \times T_n - F_p \times F_n}{\sqrt{(T_p + F_p)(T_p + F_n)(T_n+F_p)(T_n+F_n)}}
+$$
 
 ### Step 5: Load results from all studies
-Separately, we have run our spectral clustering methods on all of our cleaned and labeled datasets in `output` and saved the results in `output/studies`.  We plot the results of our studies below.
-```{r}
-load(file.path(projDir,"output/processed_data/prelimResults.RData"))
-tb %>% 
-  transform(accuracy  = as.numeric(accuracy)) %>%
-  arrange(desc(accuracy)) %>%
-  ggplot(aes(x=accuracy, y=study)) + 
-  geom_point() + 
-  theme_bw() + 
-  xlab('Classification Accuracy') +
-  ylab('Study')
+Separately, we have run our spectral clustering methods on all of our cleaned and labeled datasets in `output` and saved the results in `output/studies`. [code omitted]  We plot the results of our studies below.
+```{r, message=FALSE, warning=FALSE, include=FALSE, eval=TRUE}
+load(file.path(projDir,"output/studies/prelimResults.RData"))
+tb_qr <- tb %>%
+  transform(
+    precision = as.numeric(precision),
+    recall = as.numeric(recall),
+    f1 = as.numeric(f1),
+    accuracy = as.numeric(accuracy),
+    mcc = as.numeric(mcc)
+  ) %>%
+  select(study, method, precision, recall, f1, accuracy, mcc)
 
-tb_teacher%>% 
-  transform(accuracy  = as.numeric(accuracy)) %>%
-  arrange(desc(accuracy)) %>%
-  ggplot(aes(x=accuracy, y=study)) + 
-  geom_point() + 
-  theme_bw() + 
-  xlab('Classification Accuracy') +
-  ylab('Study')
-# needs implementation ___ MAKE SURE THAT YOU CHART THE F1, not the accuracy!
+tb_km <- tb_teacher %>%
+  transform(
+    method = "runSpectralClusteringKM",
+    precision = as.numeric(precision),
+    recall = as.numeric(recall),
+    f1 = as.numeric(f1),
+    accuracy = as.numeric(accuracy),
+    mcc = as.numeric(mcc)
+  ) %>%
+  select(study, method, precision, recall, f1, accuracy, mcc)
+
+tb_join <- full_join(tb_qr,tb_km)
 ```
 
-Alternate implementation of the plot
-```{r}
-fj <- full_join(tb,tb_teacher) %>%
-  mutate(accuracy = as.numeric(accuracy))
+#### Precision-Recall Scatterplot of Spectral Clustering with QR Decomposition
+```{r out.width='0.5\\textwidth'}
+ggplot(data=tb_qr, aes(x=recall, y=precision, col=factor(study))) + geom_point()
 ```
-plot
-```{r}
-ggplot(data=fj, aes(x=study, y=accuracy, fill=method)) + 
-    geom_bar(colour="black", stat="identity",
-             position=position_dodge(),
-             size=.3) +                        # Thinner lines
-    scale_fill_hue(name="Method") +      # Set legend title
-    xlab("Author Study") + ylab("Accuracy") + # Set axis labels
-    ggtitle("Classification Accuracy By Method") +     # Set title
-    theme_bw()
+
+#### Precision-Recall Scatterplot of Spectral Clustering KMeans 
+```{r out.width='0.5\\textwidth'}
+ggplot(data=tb_km, aes(x=recall, y=precision, col=factor(study))) + geom_point()
+```
+
+#### Comparison of Accuracy of Spectral Clustering with QR Decomposition vs Spectral Clustering KMeans
+```{r out.width='0.5\\textwidth'}
+ggplot(data=tb_join, aes(x=study, y=accuracy, fill=method)) +
+    geom_bar(stat="identity", position=position_dodge()) + coord_flip()
+```
+
+#### Comparison of F1 score of Spectral Clustering with QR Decomposition vs Spectral Clustering KMeans
+```{r out.width='0.5\\textwidth'}
+ggplot(data=tb_join, aes(x=study, y=f1, fill=method)) +
+    geom_bar(stat="identity", position=position_dodge()) + coord_flip()
+```
+
+#### Comparison of MCC score of Spectral Clustering with QR Decomposition vs Spectral Clustering KMeans
+```{r out.width='0.5\\textwidth'}
+ggplot(data=tb_join, aes(x=study, y=mcc, fill=method)) +
+    geom_bar(stat="identity", position=position_dodge()) + coord_flip()
 ```
 
 \hrulefill
 
 ## General Notes on Spectral Clustering vs K-Means using Term Frequency:
-Why TF-IDF? Term frequency counts the number of times a word from a corpus apprears in a particular document.  Some words appear frequently in all documents (i.e. they are common locally).  Other words appear rarely in the corpus (i.e. they are rare globally).  Inverse document frequency weights words that appear rarely more heavily, implying that rare words are more important for determining the cluster assignment of a particular document than words that are common to all documents in a corpus.  Importantly, TF-IDF can be used with
+Why TF-IDF? Term frequency counts the number of times a word from a corpus apprears in a particular document.  Some words appear frequently in all documents (i.e. they are common locally).  Other words appear rarely in the corpus (i.e. they are rare globally).  Inverse document frequency weights words that appear rarely more heavily, implying that rare words are more important for determining the cluster assignment of a particular document than words that are common to all documents in a corpus.
 
 ### Distance measures
+Distance measures are the way convergence is measured.  The selection of distance measures is very important to consider because different clustering problems require different measures of similarity.  In fact, while researching distances, we discovered that there is a textbook called "Encyclopedia of Distances" by Michael Dez and Elena Deza which contains helpful information on the different ways of selecting the correct distance metric for a particular problem.  Below are two common measures of distance.
 
 #### Scaled Euclidean Distance:
 $$d(x_i,x_q) = \sqrt{a_1(x_i[1]-x_q[1])^2 + \ldots + a_d(x_i[d]-x_q[d])^2} $$
@@ -227,10 +274,16 @@ $$ \frac{x_i^Tx_q}{\begin{Vmatrix} x_i \end{Vmatrix} \begin{Vmatrix} x_q \end{Vm
 
 \begin{enumerate}
 \item Initialize cluster centers
-\item Assign observations to closest cluster center
+\item Assign observations to closest cluster center (hard assignment)
 \item Revise cluster centers as mean of assigned observations
 \item Repeat steps 1 \& 2 until convergence
 \end{enumerate}
+
+\begin{figure}[h]
+\centering
+\caption{Kmeans pseudocode}
+\includegraphics[width=350pt]{presentation_img/kmeans_algorithm.png}
+\end{figure}
 
 #### Complexity of brute-force search
 Given a query point, $O(N)$ distance computations per 1-NN query.  By extension, $O(N \log k)$ distance computations per $k$-NN query.
@@ -241,8 +294,6 @@ Given a query point, $O(N)$ distance computations per 1-NN query.  By extension,
 \item overlapping clusters
 \item different shaped / oriented clusters
 \end{itemize}
-
-\includegraphics[width=300pt]{presentation_img/failure_kmeans.png}
 
 In the most basic implementation, k-means tries to make cluster assignments of documents using euclidean distances based on distances from cluster centers:
 $$ z_i \leftarrow \arg \min \begin{Vmatrix} u_j - \textbf{x}_i \end{Vmatrix}^2_2$$
@@ -257,22 +308,15 @@ Section II: Paper 6
 
 ### "A Constraint-Based Probabilistic Framework for Name Disambiguation"
 
-In this paper, Zhang, Tang, Li, and Wang propose a mixture model using the expectations maximization algorithm to perform name disambiguation.  They propose a 'semi-supervised' framework to "combine the advantages of supervised and unsupervised methods."  What does this mean in practice?  First, we randomize the weights we assign to the constraints per `section 3.2`.  Then, we try to use EM to minimize our objective function with two weighted constraints.
+In this paper, Zhang, Tang, Li, and Wang propose a mixture model using the expectations maximization algorithm to perform name disambiguation.  They propose a 'semi-supervised' framework to "combine the advantages of supervised and unsupervised methods."  What does this mean in practice?  First, we randomize the weights we assign to the constraints per `section 3.2`.  Then, we try to use EM to minimize our objective function with two weighted constraints.  The steps in the EM algorithm can be summarized at a high level as follows:
 
+\begin{figure}[h]
+\centering
+\caption{EM pseudocode}
+\includegraphics[width=350pt]{presentation_img/em_algorithm.png}
+\end{figure}
 
-model, and then compute p(zi = k|xi, θ), which represents the posterior probability that point i belongs to cluster k. This is known as the responsibility of cluster k for point i, and can be computed using Bayes rule as follows:
-
-
-This procedure is called soft clustering, and is identical to the computations performed when using a generative classifier. The di erence between the two models only arises at training time: in the mixture case, we never observe zi, whereas with a generative classifier, we do observe yi (which plays the role of zi).
-
-EM exploits the fact that if the data were fully observed, then the ML/ MAP estimate would be easy to compute. In particular, EM is an iterative algorithm which alternates between inferring the missing values given the parameters (E step), and then optimizing the parameters given the “filled in” data (M step). We give the details below, followed by several examples. We end with a more theoretical discussion, where we put the algorithm in a larger context. See Table 11.2 for a summary of the applications of EM in this book.
-
-
-Hence in each E step, we must find the Euclidean distance between N data points and K cluster centers, which takes O(NKD) time. However, this can be sped up using various techniques, such as applying the triangle inequality to avoid some redundant computations (Elkan 2003). Given the hard cluster assignments, the M step updates each cluster center by computing the mean of all points assigned to it:
-\mu_k = \frac{1}{N_k} \sum\limits_{i:z_i=k} x_i
-
-
-Essentially, we are trying to figure out the weights to assign to the 
+In the EM algorithm, $p(z_i = k | x_i, \theta)$ represents the posterior probability that point $i$ belongs to cluster $k$. This is known as the responsibility of cluster $k$ for point $i$, and can be computed using Bayes rule.  This procedure is called *soft clustering*.  EM is an iterative algorithm which alternates between inferring the missing values given the parameters (E step), and then optimizing the parameters given the "filled in" data (M step).  An illustration of this iterative process is shown below:
 
 \includegraphics[width=150pt]{presentation_img/iteration_1.png}
 \includegraphics[width=150pt]{presentation_img/iteration_2.png}
@@ -283,15 +327,6 @@ Table 2 contstraints:
 $c_2$ for any two papers, if they share a co-author, $c_2$ is 1, otherwise is 0
 $c_6$ if co-authors of any two papers are are also 
 
-Minimize the objective function by using EM algorithm:
-
-Objective Function:
-$$ \max p(Y|X) \propto \min f_{obj} = \sum_i \sum_j \{D(x_i, x_j) I (l_i \neq l_j) \sum_{c_k \in C} [w_k c_k (p_i, p_j)] \} + \sum_{x_i \in X} D(x_i, y_{l_i}) + \log Z $$
-where,
-$$ D(x_i, y_{l_i}) $$ is the distance between paper $i$ and researcher $y_{l_i}$
-$w_k$ is the weight of for $c_k$
-$Z$ is the normalization factor
-
 Constraints:
 The constraint function is a Boolean-valued function and is defined as follow:
 $$ c(p_i,p_j) =
@@ -299,6 +334,14 @@ $$ c(p_i,p_j) =
 1, & \text{if $p_i$ and $p_j$ satisfy the constraint $c_l$} \\
 0, & \text{otherwise}
 \end{cases} $$
+
+Goal is to minimize the objective function by using EM algorithm.
+\textbf{Objective Function:}
+$$ \max p(Y|X) \propto \min f_{obj} = \sum_i \sum_j \{D(x_i, x_j) I (l_i \neq l_j) \sum_{c_k \in C} [w_k c_k (p_i, p_j)] \} + \sum_{x_i \in X} D(x_i, y_{l_i}) + \log Z $$ \\
+where, \\
+$ D(x_i, y_{l_i}) $ is the distance between paper $i$ and researcher $y_{l_i}$ \\
+$w_k$ is the weight of for $c_k$ \\
+$Z$ is the normalization factor \\
 
 We define six types of constraints and formalize them in the framework. We propose employing EM algorithm to learn different distance metric for different persons.
 
@@ -313,7 +356,6 @@ We aims at finding the maximum of the objective
 Six types of constraints are incorporated into the objec- tive function, where constraints are considered as a form of su- pervision. If one paper’s label assignment violates a constraint, it will be penalized in some sense, which in turn affects the result.
 
 The EM process can be summarized as follows: in the E-step, given the current researcher representatives (the set of assigned papers), every paper is re-assigned to the researcher by maximiz- ing p(Y|X). In the M-step, the researcher representative yh is re- estimated from the assignments to maximize p(Y|X) again, and the distance measure is updated to increase the objective function.
-
 
 In the E-step, assignments of data points to researchers are up- dated to maximize the $p(Y\|X)$. A greedy algorithm is used to se- quentially update the assignment of each paper
 
@@ -332,8 +374,6 @@ $$ f(y_h,x_i)=\sum_{i} D(x_i,y_h) + \sum_{i,j \neq i} \{D(x_i,x_j) \sum_{c_k \no
 In the M-step, each researcher representative is updated by the arithmetic mean of its points:
 $$ y_h = \frac{\sum\limits_{i:l_i=h} x_i}{\begin{Vmatrix} \sum\limits_{i:l_i=h} x_i \end{Vmatrix}_A} $$
 
-
-
 ## Step 1: Load and process the data
 ```{r}
 AKumar <- read.csv(file.path(projDir,"output","AKumar.csv"))
@@ -351,7 +391,6 @@ MMiller <- read.csv(file.path(projDir,"output","MMiller.csv"))
 MJones <- read.csv(file.path(projDir,"output","MJones.csv"))
 MBrown <- read.csv(file.path(projDir,"output","MBrown.csv"))
 ```
-
 
 
 ```{r}
