@@ -16,7 +16,7 @@ Term: Spring 2017
 	
 **Contribution statement**: ([default](doc/a_note_on_contributions.md)) 
 
-+ Zeyu Gan contributed on the implementation of EM algorithm, objective function and c_6 constraints in paper 6.
++ Zeyu Gan contributed on the implementation of EM algorithm, differential function,objective function and c_6 constraints in paper 6.
 + Virgile Mison
 + Galen Simmons
 + Qingyuan Zhang contributed on the data cleaning part, also wrote up functions on c_2 and c_6 constraint functions, the distance function, objective function and updated main.rmd file related to reproducing works in paper 6. 
