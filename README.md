@@ -17,7 +17,10 @@ Term: Spring 2017
 Entity Resolution refers to the process of identifying multiple references to the same object and distinguishing them from mentions of different objects.
 For example, entity resolution may operate on natural language text; A special case of entity resolution, author name disambiguation, operates primarily on metadata about authors and articles.
 
-For this project, our team reproduced works in [paper 3](doc/paper/3-Han(2005).pdf) and [paper 6](doc/paper/6-Zhang(2007).pdf). 
+For this project, our team reproduced works in [paper 3](doc/paper/3-Han(2005).pdf) and [paper 6](doc/paper/6-Zhang(2007).pdf), where
+paper 3 deployed k-way spectral clustering method to solve name disambiguation in author citation, paper 6 developed a constraint-based objective function
+and applied EM algorithm to solve for name disambiguation. Due to limitation of data source we had, for paper 6 we only implemented the objective function with
+two constraints c_2 and c_6 as defined by the author.
 	
 **Contribution statement**: ([default](doc/a_note_on_contributions.md)) 
 
