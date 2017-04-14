@@ -15,12 +15,12 @@ dif_func<-function(X,Y,A,df,m){
   n<-nrow(X)
   sum<-0
   for (i in 1:n){
-    for (j in i+1:n){
-      sum<-sum+dif_dist(X[i,],X[j,],A,m)*
-        (0.7*c_2(X[i,],X[j,],df)+c_6(x[i,],x[j,],df))+
-        dif_dist(X[i,],Y[j,],A,m)
+    for (j in i:n-1){
+      sum<-sum+dif_dist(X[i,],X[j+1,],A,m)*
+        #(0.7*c_2(i,j,df)+c_6(i,j,M))+
+        (0.7*c_2(i,j+1,df))+
+        dif_dist(X[i,],Y[j+1,],A,m)
     }
-    sum<-sum+dist_feature(X[i,],Y[i,],A)  
   }
   return(sum)
 }
@@ -62,11 +62,9 @@ union_author <- function(df) {
 uni <- union_author(AGupta)
 
 # Matrix Mp
-M_p <-function(a) { 
-  return(x = diag(1, nrow = nrow(a)))
+M_p <- function(df){
+  return(diag(1, nrow = nrow(df)))
 }
-
-
 # Matrix Mpa
 M_pa <- function(a) {
   authors <- union_author(a)
@@ -94,14 +92,13 @@ M_ap <- function(a) {
 
 ## here we also need a database (called db) that has all publication information including coauthors. 
 ## ( basically it's the rbind of all 14 datasets, with 6 columns. What we care is the coauthor column)
-
 M_a <- function(a) {
   all_author <- union_author(a)
   mat_a <- matrix(NA, nrow = length(all_author), ncol = length(all_author))
-  for (i in 1:length(all_author)) {
-    for (j in 1:length(all_author)) {
-      a_index <- grep(all_author[i], db, value = F)
-      b_index <- grep(all_author[j], db, value = F)
+  for (i in all_author) {
+    for (j in all_author) {
+      a_index <- grep(i, db, value = F)
+      b_index <- grep(j, db, value = F)
       mat_a[i, j] <- ifelse(any(a_index %in% b_index), 1, 0)
     }
   }
@@ -172,7 +169,8 @@ obj_func<-function(X,Y,df){
     for (j in i:n){
       if (any(Y[i,]!=Y[j,])){
         sum<-sum+dist_feature(X[i,],X[j,],A)*
-          (0.7*c_2(i,j,df)+c_6(i,j,df))
+          #(0.7*c_2(i,j,df)+c_6(i,j,df))
+          (0.7*c_2(i,j,df))
       }
     }
     sum<-sum+dist_feature(X[i,],Y[i,],A)
@@ -227,7 +225,6 @@ init_tag <- function(df) {
 # A <- diag(1, nrow = 577, ncol = 577)
 
 EM_algorithm <- function(X, Y, l, df) {
-  df<-AGupta
   k<-max(df$AuthorID)
   n<-nrow(X)
   numb<-0
