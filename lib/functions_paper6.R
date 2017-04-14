@@ -1,9 +1,18 @@
 # All functions used for paper 6
 
+### The EM algorithm being very slow, we tried to improve the performance
+### by improving the implementation of the E and M steps.
+### As a conclusion, we increased significantly the M step that is not a 
+### bottleneck anymore. However, even if faster, E step is not reasonably
+### computable for n>30 (smallest dataset being 112...).
+
+# to compute gain in performance (if any)
+gainPerf <- function(new,old) sprintf("Gain from %s to %s: %s",round(old[3],4), round(new[3],4), round(old[3]/new[3],2))
+
 #differential function
 
 dif_dist<-function(x_i,x_j,A,m){
-  #take derivative of a_mm
+  #take derivative of a_mmorm_i
   part1<-x_i[m]*x_j[m]*sqrt(t(x_i)%*%A%*%x_i)*sqrt(t(x_j)%*%A%*%x_j)
   part2<-(t(x_i)%*%A%*%x_j)*((x_i[m]^2)*(t(x_i)%*%A%*%x_i)
                              +(x_j[m]^2)*(t(x_j)%*%A%*%x_j))/(2*sqrt(t(x_i)%*%A%*%x_i)*sqrt(t(x_j)%*%A%*%x_j))
@@ -11,19 +20,64 @@ dif_dist<-function(x_i,x_j,A,m){
   return((part1-part2)/part3)
 }
 
+# use crossprod(diag(A),x_i^2) <=> t(x_i)%*%A%*%x_i (twice faster)
+dif_distFast<-function(x_i,x_j,A,m){
+  #take derivative of a_mmorm_i
+  norm2i <- crossprod(diag(A),x_i^2)
+  norm2j <- crossprod(diag(A),x_j^2)
+  prodNorms <- norm2i*norm2j
+  return((x_i[m]*x_j[m]*sqrt(prodNorms)-(t(x_i)%*%A%*%x_j)*((x_i[m]^2)*norm2i+(x_j[m]^2)*norm2j)/(2*sqrt(prodNorms)))/prodNorms)
+}
+
+# Test increase in perf (divide by 3)
+#gainPerf(system.time(dif_distFast(X[10,],Y[5,],A,5)),system.time(dif_dist(X[10,],Y[5,],A,5)))
+
 dif_func<-function(X,Y,A,df,m){
   n<-nrow(X)
   sum<-0
   for (i in 1:n){
     for (j in i:n-1){
-      sum<-sum+dif_dist(X[i,],X[j+1,],A,m)*
+      sum<-sum+dif_distFast(X[i,],X[j+1,],A,m)*
         #(0.7*c_2(i,j,df)+c_6(i,j,M))+
         (0.7*c_2(i,j+1,df))+
-        dif_dist(X[i,],Y[j+1,],A,m)
+        dif_distFast(X[i,],Y[j+1,],A,m)
     }
   }
   return(sum)
 }
+
+dif_funcFast<-function(X,Y,A,df,m){
+  n<-nrow(X);  sum<-0;
+  # for x and xx
+  norm2x <- apply(matrix(1:n), 2, FUN=function(j)crossprod(diag(A),X[j,]^2))[[1]]@x#
+  prodNormXX <- outer(norm2x,norm2x)#
+  ximxjm <- outer(X[,m],X[,m])#
+  xiAxj <- t(X)%*%A%*%X/2#
+  xi2Ovnorm2xj <- matrix(rep(X[,m]^2,n),nrow=n)/t(matrix(rep(norm2x,n),nrow=n))
+  xj2Ovnorm2xi <- t(matrix(rep(X[,m]^2,n),nrow=n))/matrix(rep(norm2x,n),nrow=n)
+  # for xy
+  norm2y <- apply(matrix(1:n), 1, FUN=function(j)crossprod(diag(A),Y[j,]^2))
+  prodNormXY <- outer(norm2x,norm2y)
+  ximyjm <- outer(X[,m],Y[,m])#
+  xiAyj <- t(X)%*%A%*%Y/2#
+  xi2Ovnorm2yj <- matrix(rep(X[,m]^2,n),nrow=n)/t(matrix(rep(norm2y,n),nrow=n))
+  yj2Ovnorm2xi <- t(matrix(rep(Y[,m]^2,n),nrow=n))/matrix(rep(norm2x,n),nrow=n)
+  
+  # df/damm = sum(sum( upper.triangle(dDxx/damm*0.7*c2+dDxy/damm) ))
+  #to calculate sum of dif_dist(X[i,],X[j+1,],A,m)*(0.7*c_2(i,j+1,df))+dif_dist(X[i,],Y[j+1,],A,m) for i=1:n, j=i+1:n
+  dDxx <- (ximxjm - xiAxj*(xi2Ovnorm2xj-xj2Ovnorm2xi) )/sqrt(prodNormXX)
+  dDxy <- (ximyjm - xiAyj*(xi2Ovnorm2yj-yj2Ovnorm2xi) )/sqrt(prodNormXY)
+  c2 <- matrix(NA,nrow=n,ncol=n)
+  for (i in 1:n) {
+    c2[i,] <- apply(matrix(1:n),1,FUN=function(j)c_2(i,j,df))
+  }
+  #sum <- apply(matrix(1:(n-1)),1,FUN=function(i)sum(apply(matrix((i+1):n),1,FUN=function(j)X[i,m]*X[j,m]*sqrt(prodNormXX[i,j])-(sum(diag(A)*X[i,]*X[j,]))*((X[i,m]^2)*norm2x[i]+(X[j,m]^2)*norm2x[j])/(2*sqrt(prodNormXX[i,j]))/prodNormXX[i,j])*0.7*c_2(i,j+1,df)+X[i,m]*Y[j,m]*sqrt(prodNormXY[i,j])-(sum(diag(A)*X[i,]*Y[j,]))*((X[i,m]^2)*norm2x[i]+(Y[j,m]^2)*norm2y[j])/(2*sqrt(prodNormXY[i,j]))/prodNormXY[i,j]))
+  return(sum((dDxx*.7*c2+dDxy)[upper.tri(dDxx, diag = FALSE)]))
+}
+
+# test performance (divide by sqrt(n))
+#n=80; X = x_agu[1:n,1:n]; Y = y_agu[1:n,1:n]; df = AGupta[1:n,]; A <- diag(1+rnorm(n)/4, nrow = n, ncol = n); l <- l_agu[,1:n]; m=5;
+#gainPerf(system.time(dif_funcFast(X,Y,A,df,m)),system.time(dif_func(X,Y,A,df,m)))
 
 
 #-----------------------------------------------------------------
@@ -44,8 +98,8 @@ c_2 <- function(p_i, p_j, df) {
 # Take AGupta for example
 # AGupta <- read.csv("../output/Agupta.csv")
 # 
-# c_2(6,7,AGupta)
-# c_2(6,10,AGupta)
+#c_2(6,7,AGupta)
+#c_2(6,10,AGupta)
 
 
 
@@ -178,6 +232,41 @@ obj_func<-function(X,Y,df){
   return(sum)
 }
 
+obj_funcFast<-function(X,Y,df){
+  #X is the matrix of feature of all papers.
+  #df is the list of all articles.
+  #Y is the matrix of researchers for all papers.
+  n<-nrow(X)
+  # for x and xx
+  norm2x <- apply(matrix(1:n), 2, FUN=function(j)crossprod(diag(A),X[j,]^2))[[1]]@x
+  prodNormXX <- outer(norm2x,norm2x)
+  xiAxj <- t(X)%*%A%*%X/2
+  # for xy
+  norm2y <- apply(matrix(1:n), 1, FUN=function(j)crossprod(diag(A),Y[j,]^2))
+  prodNormXY <- outer(norm2x,norm2y)
+  xiAyj <- t(X)%*%A%*%Y/2
+
+  YiYj <- matrix(0, nrow=n, ncol=n)
+  for (i in 1:n){
+    for (j in i:n){
+      if (any(Y[i,]!=Y[j,])) YiYj[i,j] <- 1;
+    }
+  }
+  
+  dXiXj <- 1 - xiAxj/sqrt(prodNormXX)
+  dXiYj <- 1 - xiAyj/sqrt(prodNormXY)
+  c2 <- matrix(NA,nrow=n,ncol=n)
+  for (i in 1:n) {
+    c2[i,] <- apply(matrix(1:n),1,FUN=function(j)c_2(i,j,df))
+  }
+  return(sum(sum(dXiXj*YiYj*0.7*c2))+sum(diag(dXiYj)))
+}
+
+# increase in performance (divide computation time by approximatively sqrt(n)/2)
+#gainPerf(system.time(obj_funcFast(X,Y,df)),system.time(obj_func(X,Y,df)))
+
+
+
 #----------------------------------------------------------------------------------------
 # EM framework
 
@@ -191,8 +280,13 @@ init_tag <- function(df) {
   return(sample(1:length(unique(df$AuthorID)), nrow(df), replace = T))
 }
 
+switchYiLj <- function(Y,l,i,j) {
+  if (i==1) {return(rbind(l[j,],Y[(i+1):length(Y[,1]),]));}
+  else if (i==length(Y[,1])) return(rbind(Y[1:(i-1),],l[j,]))
+  else return(rbind(Y[1:(i-1),],l[j,],Y[(i+1):length(Y[,1]),]))
+}
 
-# init_tag(AKumar)
+#init_tag(AKumar)
 
 
 #-------------
@@ -228,10 +322,12 @@ EM_algorithm <- function(X, Y, l, df) {
   k<-max(df$AuthorID)
   n<-nrow(X)
   numb<-0
+  A <- diag(1+rnorm(n)/4, nrow = n, ncol = n)
   while(numb<1000){
     Y_stop<-Y
     #E-step
     for(i in 1:n){
+      print(i)
       Y_tem<-Y
       tem<-NULL
       for (j in 1:k){
@@ -256,10 +352,48 @@ EM_algorithm <- function(X, Y, l, df) {
       Y[c,]<-l[i,]
     }
     for(m in 1:n){
-      A[m,m]<-A[m,m]+0.75*dif_func(X,Y,A,m)
+      print(m)
+      A[m,m]<-A[m,m]+0.75*dif_func(X,Y,A,df,m)
     }
   }
+}
   
+EM_algorithmFast <- function(X, Y, l, df) {
+  k<-max(df$AuthorID)
+  n<-nrow(X)
+  numb<-0
+  A <- diag(1+rnorm(n)/4, nrow = n, ncol = n)
+  while(numb<3){
+    print(sprintf("Start step %s",numb+1))
+    Y_stop<-Y
+    #E-step
+    for(i in 1:n){
+      print(sprintf("E-step: %.2s%%",100*i/n))
+      Y_tem<-Y
+      tem<-apply(matrix(1:k),1,FUN=function(j)obj_funcFast(X,switchYiLj(Y,l,i,j),df))
+      Y[i,]<-l[which.min(tem),]
+      numb<-numb+1
+    }
+    if(obj_funcFast(X,Y,df)==obj_funcFast(X,Y_stop,df)) break
+    #M-step
+    for (i in 1:k){
+      print(sprintf("M-step: %.2s%%",100*i/k))
+      sum_x<-0
+      c<-NULL
+      for(j in 1:n){
+        if (all(Y[j,]==l[i,])) {
+          sum_x<-sum_x+X[j,]
+          rbind(c,j)
+        }
+      }
+      l[i,]<-sum_x/sqrt(t(sum_x)%*%A%*%sum_x)
+      Y[c,]<-l[i,]
+    }
+    for(m in 1:n){
+      print(m)
+      A[m,m]<-A[m,m]+0.75*dif_funcFast(X,Y,A,df,m)
+    }
+  }
 }
 
 

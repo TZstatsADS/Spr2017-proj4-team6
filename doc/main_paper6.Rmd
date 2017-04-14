@@ -33,20 +33,20 @@ pacman::p_load(text2vec, dplyr, qlcMatrix, kernlab, knitr)
 For each record in the dataset, there are some information we want to extract and store them in a regular form: canonical author id, coauthors, paper title, publication venue title. You may need to find regular matched in the input string vectors by using regex in R. Here is a tutorial for regular expression in R, which might help you <https://rstudio-pubs-static.s3.amazonaws.com/74603_76cd14d5983f47408fdf0b323550b846.html>
 
 ```{r}
-AKumar <- read.csv("../output/AKumar.csv")
-AGupta <- read.csv("../output/Agupta.csv")
-CChen <- read.csv("../output/CChen.csv")
-DJohnson <- read.csv("../output/DJohnson.csv")
-JLee <- read.csv("../output/JLee.csv")
-JMartin <- read.csv("../output/JMartin.csv")
-JRobinson <- read.csv("../output/JRobinson.csv")
-JSmith <- read.csv("../output/JSmith.csv")
-KTanaka <- read.csv("../output/KTanaka.csv")
-YChen <- read.csv("../output/YChen.csv")
-SLee <- read.csv("../output/SLee.csv")
-MMiller <- read.csv("../output/MMiller.csv")
-MJones <- read.csv("../output/MJones.csv")
-MBrown <- read.csv("../output/MBrown.csv")
+AKumar <- read.csv("output/AKumar.csv")
+AGupta <- read.csv("output/Agupta.csv")
+CChen <- read.csv("output/CChen.csv")
+DJohnson <- read.csv("output/DJohnson.csv")
+JLee <- read.csv("output/JLee.csv")
+JMartin <- read.csv("output/JMartin.csv")
+JRobinson <- read.csv("output/JRobinson.csv")
+JSmith <- read.csv("output/JSmith.csv")
+KTanaka <- read.csv("output/KTanaka.csv")
+YChen <- read.csv("output/YChen.csv")
+SLee <- read.csv("output/SLee.csv")
+MMiller <- read.csv("output/MMiller.csv")
+MJones <- read.csv("output/MJones.csv")
+MBrown <- read.csv("output/MBrown.csv")
 ```
 
 ## Step 2: Feature design
@@ -67,7 +67,7 @@ $$
 
 To compute TF-IDF, we first need to construct a document-term matrix (DTM). In other words, the first step is to vectorize text by creating a map from words to a vector space. There are some good packages you could use for text mining (probably you have tried during first project, you don't need to follow my code if you are familiar with other package), e.g. *text2vec, tm, tidytext*. Here, we are going to use *text2vec* package. A good tutorial can be found here, <https://cran.r-project.org/web/packages/text2vec/vignettes/text-vectorization.html>.
 
-Let???s first create a vocabulary-based DTM. Here we collect unique terms from all documents and mark each of them with a unique ID using the  `create_vocabulary()` function. We use an iterator to create the vocabulary.
+Lets first create a vocabulary-based DTM. Here we collect unique terms from all documents and mark each of them with a unique ID using the  `create_vocabulary()` function. We use an iterator to create the vocabulary.
 ```{r}
 # Write a function to calcuate the DTM for paper
 dtm_paper <- function(df) {
@@ -182,7 +182,7 @@ db <- c(as.character(AGupta$Coauthor), as.character(AKumar$Coauthor), as.charact
         as.character(KTanaka$Coauthor), as.character(MBrown$Coauthor), as.character(MJones$Coauthor),
         as.character(MMiller$Coauthor),as.character(SLee$Coauthor), as.character(YChen$Coauthor))
 
-source("../lib/functions_paper6.R")
+source("lib/functions_paper6.R")
 
 x_agu <- docsdissim(AGupta)
 y_ini <- sample(1:26, 577, replace = T)
@@ -193,10 +193,26 @@ for(i in unique(AGupta$AuthorID)) {
 y_agu <- matrix(NA, ncol = ncol(x_agu), nrow = 577)
 for (i in 1:577) {
   y_agu[i, ] <- l_agu[y_ini[i], ]
-
 }
-A <- diag(1, nrow = 577, ncol = 577)
+
 EM_algorithm(X = x_agu, Y = y_agu, l = l_agu, df = AGupta)
+
+## try EM_algorithmFast on smaller dataset (JMartin) to run 3 iterations
+## E step is still a bottleneck, but step M is now fast
+k <- length(unique(JMartin$AuthorID))
+x_jmt <- docsdissim(JMartin)
+y_ini <- sample(1:k, length(x_jmt[1,]), replace = T)
+l_jmt <- matrix(NA, ncol = ncol(x_jmt), nrow = k)
+for(i in unique(JMartin$AuthorID)) {
+  l_jmt[i,] <- mean(x_jmt[which(i==JMartin$AuthorID), ])
+}
+y_jmt <- matrix(NA, ncol = ncol(x_jmt), nrow = length(x_jmt[1,]))
+for (i in 1:length(x_jmt[1,])) {
+  y_jmt[i, ] <- l_jmt[y_ini[i], ]
+}
+
+EM_algorithmFast(X = x_jmt, Y = y_jmt, l = l_jmt, df = JMartin)
+
 ```
 
 ## Step 4: Evaluation
@@ -230,6 +246,6 @@ compare_df <- data.frame(author=c("AGupta","AKumar"),
                          f1=c(performance_hclust_AGupta$f1, performance_hclust_AKumar$f1),
                          accuracy=c(performance_hclust_AGupta$accuracy, performance_hclust_AKumar$accuracy))
 
-kable(compare_df,caption="Comparision of performance for two clustering methods",digits = 2)
+kable(compare_df,caption="Comparaison of performance for two clustering methods",digits = 2)
 ```
 
