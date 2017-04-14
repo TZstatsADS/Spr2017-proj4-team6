@@ -58,13 +58,13 @@ dif_funcFast<-function(X,Y,A,df,m){
   # for xy
   norm2y <- apply(matrix(1:n), 1, FUN=function(j)crossprod(diag(A),Y[j,]^2))
   prodNormXY <- outer(norm2x,norm2y)
-  ximyjm <- outer(X[,m],Y[,m])#
-  xiAyj <- t(X)%*%A%*%Y/2#
+  ximyjm <- outer(X[,m],Y[,m])
+  xiAyj <- t(X)%*%A%*%Y/2
   xi2Ovnorm2yj <- matrix(rep(X[,m]^2,n),nrow=n)/t(matrix(rep(norm2y,n),nrow=n))
   yj2Ovnorm2xi <- t(matrix(rep(Y[,m]^2,n),nrow=n))/matrix(rep(norm2x,n),nrow=n)
   
   # df/damm = sum(sum( upper.triangle(dDxx/damm*0.7*c2+dDxy/damm) ))
-  #to calculate sum of dif_dist(X[i,],X[j+1,],A,m)*(0.7*c_2(i,j+1,df))+dif_dist(X[i,],Y[j+1,],A,m) for i=1:n, j=i+1:n
+  # to calculate sum of dif_dist(X[i,],X[j+1,],A,m)*(0.7*c_2(i,j+1,df))+dif_dist(X[i,],Y[j+1,],A,m) for i=1:n, j=i+1:n
   dDxx <- (ximxjm - xiAxj*(xi2Ovnorm2xj-xj2Ovnorm2xi) )/sqrt(prodNormXX)
   dDxy <- (ximyjm - xiAyj*(xi2Ovnorm2yj-yj2Ovnorm2xi) )/sqrt(prodNormXY)
   c2 <- matrix(NA,nrow=n,ncol=n)
@@ -358,6 +358,7 @@ EM_algorithm <- function(X, Y, l, df) {
   }
 }
   
+# implementation with fast functions, M step is now doable, but still not E step..
 EM_algorithmFast <- function(X, Y, l, df) {
   k<-max(df$AuthorID)
   n<-nrow(X)
@@ -366,7 +367,7 @@ EM_algorithmFast <- function(X, Y, l, df) {
   while(numb<3){
     print(sprintf("Start step %s",numb+1))
     Y_stop<-Y
-    #E-step
+    # E-step
     for(i in 1:n){
       print(sprintf("E-step: %.2s%%",100*i/n))
       Y_tem<-Y
@@ -375,7 +376,7 @@ EM_algorithmFast <- function(X, Y, l, df) {
       numb<-numb+1
     }
     if(obj_funcFast(X,Y,df)==obj_funcFast(X,Y_stop,df)) break
-    #M-step
+    # M-step
     for (i in 1:k){
       print(sprintf("M-step: %.2s%%",100*i/k))
       sum_x<-0

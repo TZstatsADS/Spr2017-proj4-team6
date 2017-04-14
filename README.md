@@ -17,7 +17,7 @@ Term: Spring 2017
 **Contribution statement**: ([default](doc/a_note_on_contributions.md)) 
 
 + Zeyu Gan contributed on the implementation of EM algorithm, differential function,objective function and c_6 constraints in paper 6.
-+ Virgile Mison
++ Virgile Mison contributed for paper 3 on the replication of spectral clustering algorithm with K-means, the implementation of K-way spectral clustering with Pivoted QR Decomposition, updated main.rmd for LaTeX explanations on spectral clustering, and on paper 6 with improving performance of EM algorithm by optimizing code on differential function, distance function, objective function and EM.
 + Galen Simmons
 + Qingyuan Zhang contributed on the data cleaning part, also wrote up functions on c_2 and c_6 constraint functions, the distance function, objective function and updated main.rmd file related to reproducing works in paper 6. 
 
@@ -25,11 +25,11 @@ Following [suggestions](http://nicercode.github.io/blog/2013-04-05-projects/) by
 
 ```
 proj/
-├── lib/
-├── data/
-├── doc/
-├── figs/
-└── output/
+????????? lib/
+????????? data/
+????????? doc/
+????????? figs/
+????????? output/
 ```
 
 Please see each subfolder for a README file.
